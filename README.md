@@ -1,14 +1,6 @@
 # Personalized Graph Embedding
 A repo for graph embedding with node-personalized attention implemented by Pytorch, based on Attention Walk proposed in https://papers.nips.cc/paper/8131-watch-your-step-learning-node-embeddings-via-graph-attention
 
-### Datasets Downloading
-Download the datasets used in [Abu-El-Haija et al, CIKM'17](https://dl.acm.org/citation.cfm?id=3132959):
-
-    # From google-research/
-    curl http://sami.haija.org/graph/datasets.tgz > datasets.tgz
-    tar zxvf datasets.tgz
-
-
 ### Examples
 The following command learns a graph embedding and writes the embedding to disk. The node representations are ordered by the ID.
 
