@@ -106,4 +106,7 @@ venv.bak/
 # run bash
 run.sh
 
+# Pycharm cache files
 .idea/
+
+datasets/

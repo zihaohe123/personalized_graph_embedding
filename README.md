@@ -1,20 +1,34 @@
-# personalized_graph_embedding
+# Personalized Graph Embedding
 A repo for graph embedding with node-personalized attention implemented by Pytorch, based on Attention Walk proposed in https://papers.nips.cc/paper/8131-watch-your-step-learning-node-embeddings-via-graph-attention
+
+### Datasets Downloading
+Download the datasets used in [Abu-El-Haija et al, CIKM'17](https://dl.acm.org/citation.cfm?id=3132959):
+
+    # From google-research/
+    curl http://sami.haija.org/graph/datasets.tgz > datasets.tgz
+    tar zxvf datasets.tgz
 
 
 ### Examples
 The following command learns a graph embedding and writes the embedding to disk. The node representations are ordered by the ID.
 
-Creating an Attention Walk embedding of the default dataset with the standard hyperparameter settings.
+Creating an Attention Walk embedding of the default dataset wiki-vote with the standard hyperparameter settings.
 
 ```
 python main.py
 ```
 
-Creating an Attention Walk embedding of the default dataset with 256 dimensions and using GPU 0.
+Creating an Attention Walk embedding of the ppi dataset with the standard hyperparameter settings.
+
+```
+python main.py --dataset=ppi
+```
+
+
+Creating an Attention Walk embedding of the default dataset with 128 dimensions and learning rate 0.1 using GPU 0.
 
 
 ```
-python main.py --emb_dim=256 --gpu=0
+python main.py --emb_dim=128 lr=1e-1 --gpu=0
 
 ```
