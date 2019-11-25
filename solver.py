@@ -70,7 +70,8 @@ class Solver:
 
         transit_mat = adj_mat.T
         degree = transit_mat.sum(axis=0)
-        transit_mat = transit_mat / degree + 1e-7
+        transit_mat = transit_mat / (degree + 1e-7)
+
         # degrees = adj_mat.sum(axis=0)  # V
         # diag = np.diag(degrees)
         # diag = np.linalg.inv(diag)
@@ -90,9 +91,6 @@ class Solver:
 
         self.model = AttentionWalkLayer(self.num_nodes, self.transit_mat_series, self.args.emb_dim, self.args.window_size,
                                         self.args.n_walks, self.args.beta, self.args.gamma)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr)
-        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.args.lr, momentum)
-        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=30)
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
@@ -101,6 +99,11 @@ class Solver:
             torch.backends.cudnn.benchmark = True
             print("Let's use {} GPUs!".format(device_count))
         self.model.to(self.device)
+
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr)
+        # self.optimizer = torch.optim.Adagrad(self.model.parameters(), lr=self.args.lr)
+        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.args.lr, momentum)
+        # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=30)
 
         self.eval_metrics = {
             'epoch_at_best_train': 0,
