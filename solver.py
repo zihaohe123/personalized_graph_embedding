@@ -27,7 +27,6 @@ class Solver:
         self.prepare_graph()
         self.init_training()
 
-
     def prepare_graph(self):
         print('Loading graph....')
 

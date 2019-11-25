@@ -24,3 +24,4 @@ Creating an Attention Walk embedding of the default dataset with 128 dimensions 
 python main.py --emb_dim=128 lr=1e-1 --gpu=0
 
 ```
+
