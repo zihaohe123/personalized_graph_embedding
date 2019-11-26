@@ -89,7 +89,7 @@ class Solver:
         print('Initializing training....')
 
         self.model = AttentionWalkLayer(self.num_nodes, self.transit_mat_series, self.args.emb_dim, self.args.window_size,
-                                        self.args.n_walks, self.args.beta, self.args.gamma)
+                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention, self.device)
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
@@ -195,4 +195,3 @@ class Solver:
             os.mkdir('output')
         self.save_embedding()
         self.save_attention()
-

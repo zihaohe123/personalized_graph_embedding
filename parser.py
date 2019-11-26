@@ -9,9 +9,12 @@ def parameter_parser():
     """
     parser = argparse.ArgumentParser(description="Run Attention Walk.")
 
-    parser.add_argument("--dataset", default="wiki-vote",
+    parser.add_argument("--dataset", default="ppi",
                         choices=('ca-AstroPh', 'ca-HepTh', 'ppi',
                                  'soc-epinions', 'soc-facebook', 'wiki-note'), help="Dataset to use")
+    parser.add_argument("--attention", default="global_vector",
+                        choices=('constant', 'global_vector', 'global_exponential',
+                                 'personalized_vector', 'personalized_exponential', 'personalized_linear', 'personalized_function'), help="Attention method to use")
     parser.add_argument("--emb_dim", type=int, default=64, help="Number of dimensions. Default is 4.")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of gradient descent iterations. Default is 1000.")
     parser.add_argument("--window-size", type=int, default=10, help="Skip-gram window size. Default is 10.")

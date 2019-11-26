@@ -109,4 +109,4 @@ run.sh
 # Pycharm cache files
 .idea/
 
-datasets/
+datasets*
