@@ -11,7 +11,7 @@ def parameter_parser():
 
     parser.add_argument("--dataset", default="wiki-vote",
                         choices=('ca-AstroPh', 'ca-HepTh', 'ppi',
-                                 'soc-epinions', 'soc-facebook', 'wiki-note'), help="Dataset to use")
+                                 'soc-epinions', 'soc-facebook', 'wiki-vote'), help="Dataset to use")
     parser.add_argument("--attention", default="global_vector",
                         choices=('constant', 'global_vector', 'global_exponential',
                                  'personalized_vector', 'personalized_exponential', 'personalized_linear', 'personalized_function'), help="Attention method to use")

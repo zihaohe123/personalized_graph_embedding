@@ -182,10 +182,10 @@ class Solver:
 
     def save_attention(self):
         print("Saving the attention....")
-        attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(-1, 1)
+        attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
         indices = np.arange(self.args.window_size).reshape(-1, 1)
         attention = np.concatenate([indices, attention], axis=1)
-        attention = pd.DataFrame(attention, columns=['Order', 'Weight'])
+        attention = pd.DataFrame(attention).rename(columns={0: 'Order'})
         attention_path = os.path.join(self.args.output, self.args.dataset+'_attention.csv')
         attention.to_csv(attention_path, index=None)
 
