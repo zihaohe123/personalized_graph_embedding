@@ -23,5 +23,6 @@ def parameter_parser():
     parser.add_argument("--gamma", type=float, default=1e-6, help="Regularization parameter for embedding. Default is 1e-6.")
     parser.add_argument("--lr", type=float, default=5e-1, help="Gradient descent learning rate. Default is 0.5.")
     parser.add_argument("--gpu", type=str, default='', help="Which GPUs to use. Default is None.")
+    parser.add_argument("--output", type=str, default='output', help="Output path")
 
     return parser.parse_args()

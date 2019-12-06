@@ -177,7 +177,7 @@ class Solver:
         embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
         columns = ["id"] + ["x_" + str(x) for x in range(self.args.emb_dim)]
         embedding = pd.DataFrame(embedding, columns=columns)
-        embedding_path = os.path.join('output', self.args.dataset+'_embedding.csv')
+        embedding_path = os.path.join(self.args.output, self.args.dataset+'_embedding.csv')
         embedding.to_csv(embedding_path, index=None)
 
     def save_attention(self):
@@ -186,11 +186,11 @@ class Solver:
         indices = np.arange(self.args.window_size).reshape(-1, 1)
         attention = np.concatenate([indices, attention], axis=1)
         attention = pd.DataFrame(attention, columns=['Order', 'Weight'])
-        attention_path = os.path.join('output', self.args.dataset+'_attention.csv')
+        attention_path = os.path.join(self.args.output, self.args.dataset+'_attention.csv')
         attention.to_csv(attention_path, index=None)
 
     def save(self):
-        if not os.path.exists('output'):
-            os.mkdir('output')
+        if not os.path.exists(self.args.output):
+            os.mkdir(self.args.output)
         self.save_embedding()
         self.save_attention()
