@@ -1,41 +1,28 @@
 import torch
 import torch.nn as nn
-import pdb
 
 class AttentionWalkLayer(nn.Module):
-    def __init__(self, n_nodes, transit_mat_series, emb_dim, window_size, n_walks, beta, gamma, attention, device):
+    def __init__(self, n_nodes, transit_mat_series, emb_dim, window_size, n_walks, beta, gamma, attention):
         super(AttentionWalkLayer, self).__init__()
         self.left_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
         self.right_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
+        self.attention_method = attention
+
         if attention == 'constant':
-            self.attention = torch.ones(window_size).to(device)
+            self.attention = nn.Parameter(torch.ones(window_size), requires_grad=False)
         elif attention == 'global_vector':
             self.attention = nn.Parameter(torch.ones(window_size), requires_grad=True)
         elif attention == 'global_exponential':
             self.q = nn.Parameter(torch.ones(1), requires_grad=True)
-            q_sigmoid = torch.sigmoid(self.q)
-            mults = []
-            for i in range(window_size):
-                mults.append(0.99 * (q_sigmoid ** i) + 0.01)
-            self.attention = torch.stack(mults).to(device)
         elif attention == 'personalized_vector':
             self.attention = nn.Parameter(torch.ones((window_size, transit_mat_series.shape[1])), requires_grad=True)
         elif attention == 'personalized_exponential':
             self.q = nn.Parameter(torch.ones(transit_mat_series.shape[1]), requires_grad=True)
-            q_sigmoid = torch.sigmoid(self.q)
-            mults = []
-            for i in range(window_size):
-                mults.append(0.99 * (q_sigmoid ** i) + 0.01)
-            self.attention = torch.stack(mults).to(device)
         elif attention == 'personalized_linear':
-            self.q = -1 * nn.Parameter(torch.ones(transit_mat_series.shape[1]), requires_grad=True)
-            mults = []
-            for i in range(window_size):
-                mults.append(self.q * i)
-            self.attention = torch.stack(mults).to(device)
+            self.q = nn.Parameter(torch.ones(transit_mat_series.shape[1]), requires_grad=True)
         elif attention == 'personalized_function':
-            self.weight = nn.Parameter(torch.Tensor(emb_dim//2, window_size), requires_grad=True)
-            self.attention = torch.t(torch.matmul(self.left_emb, self.weight)).to(device)
+            self.linear = nn.Linear(emb_dim//2, window_size)
+            nn.init.zeros_(self.linear.bias)
         else:
             print('Unexpected attention method')
             exit()
@@ -54,8 +41,25 @@ class AttentionWalkLayer(nn.Module):
         # nn.init.uniform_(self.attention, -0.01, 0.01)
 
     def forward(self):
+        if self.attention_method in ('global_exponential', 'personalized_exponential'):
+            q_squared = self.q ** 2
+            mults = []
+            for i in range(self.window_size):
+                mults.append(0.99 * (q_squared ** i) + 0.01)
+            self.attention = torch.stack(mults)
+        elif self.attention_method == 'personalized_linear':
+            q_neg = -1 * self.q
+            mults = []
+            for i in range(self.window_size):
+                mults.append(q_neg * i)
+            self.attention = torch.stack(mults)
+        elif self.attention_method == 'personalized_function':
+            self.attention = torch.t(self.linear(self.left_emb))
+
         attention_probs = nn.functional.softmax(self.attention, dim=0)  # C
-        attention_probs = attention_probs.unsqueeze(1).unsqueeze(1)  # Cx1x1
+        while len(attention_probs.shape) < 3:
+            attention_probs = attention_probs.unsqueeze(-1)
+
         weighted_transit_mat = self.n_walks * self.n_nodes * torch.sum(attention_probs * self.transit_mat_series, dim=0)  # VxV, E[D]
         left_dot_right = torch.mm(self.left_emb, self.right_emb.transpose(0, 1))
 

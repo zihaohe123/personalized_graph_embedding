@@ -9,7 +9,7 @@ def parameter_parser():
     """
     parser = argparse.ArgumentParser(description="Run Attention Walk.")
 
-    parser.add_argument("--dataset", default="ppi",
+    parser.add_argument("--dataset", default="wiki-vote",
                         choices=('ca-AstroPh', 'ca-HepTh', 'ppi',
                                  'soc-epinions', 'soc-facebook', 'wiki-note'), help="Dataset to use")
     parser.add_argument("--attention", default="global_vector",
