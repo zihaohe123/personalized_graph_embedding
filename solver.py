@@ -7,6 +7,7 @@ import pickle
 import os
 from attentionwalk import AttentionWalkLayer
 
+
 class Solver:
     def __init__(self, args):
         self.args = args
@@ -198,8 +199,20 @@ class Solver:
         attention_path = os.path.join(self.args.output, '{}_{}_attention.csv'.format(self.args.dataset, self.args.attention))
         attention.to_csv(attention_path, index=None)
 
+    def save_results(self):
+        print("Saving the results....")
+        results = 'Best Train AUC: {:.4f}, ' \
+                  'Test AUC at Best Train: {:.4f}, ' \
+                  'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
+                    self.eval_metrics['test_auc_at_best_train'],
+                    self.eval_metrics['epoch_at_best_train'])
+        path = os.path.join(self.args.output, '{}_{}_results.txt'.format(self.args.dataset, self.args.attention))
+        with open(path, mode='w') as f:
+            f.write(results)
+
     def save(self):
         if not os.path.exists(self.args.output):
             os.mkdir(self.args.output)
         self.save_embedding()
         self.save_attention()
+        self.save_results()

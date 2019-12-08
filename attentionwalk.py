@@ -54,7 +54,7 @@ class AttentionWalkLayer(nn.Module):
                 mults.append(q_neg * i)
             self.attention = torch.stack(mults)
         elif self.attention_method == 'personalized_function':
-            self.attention = torch.t(self.linear(self.left_emb))
+            self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
 
         attention_probs = nn.functional.softmax(self.attention, dim=0)  # C
         # while len(attention_probs.shape) < 3:
