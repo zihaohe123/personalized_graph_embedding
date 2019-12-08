@@ -69,25 +69,26 @@ class Solver:
         transit_mat = adj_mat.T
         degree = transit_mat.sum(axis=0)
         transit_mat = transit_mat / (degree + 1e-7)
+        self.transit_mat = torch.from_numpy(transit_mat)
 
-        # degrees = adj_mat.sum(axis=0)  # V
-        # diag = np.diag(degrees)
-        # diag = np.linalg.inv(diag)
-        # transit_mat = np.dot(diag, adj_mat) + 1e-7
-        transit_mat = torch.from_numpy(transit_mat).to(self.device)
-        transit_mat_series = [transit_mat]
-
-        print('Preparing power series...')
-        if self.args.window_size > 1:
-            for i in range(self.args.window_size-1):
-                print('Computing T^{}....'.format(i + 2))
-                transit_mat_series.append(torch.mm(transit_mat_series[-1], transit_mat))
-        self.transit_mat_series = torch.stack(transit_mat_series)  # CxVxV
+        # # degrees = adj_mat.sum(axis=0)  # V
+        # # diag = np.diag(degrees)
+        # # diag = np.linalg.inv(diag)
+        # # transit_mat = np.dot(diag, adj_mat) + 1e-7
+        # transit_mat = torch.from_numpy(transit_mat).to(self.device)
+        # transit_mat_series = [transit_mat]
+        #
+        # print('Preparing power series...')
+        # if self.args.window_size > 1:
+        #     for i in range(self.args.window_size-1):
+        #         print('Computing T^{}....'.format(i + 2))
+        #         transit_mat_series.append(torch.mm(transit_mat_series[-1], transit_mat))
+        # self.transit_mat_series = torch.stack(transit_mat_series)  # CxVxV
 
     def init_training(self):
         print('Initializing training....')
 
-        self.model = AttentionWalkLayer(self.num_nodes, self.transit_mat_series, self.args.emb_dim, self.args.window_size,
+        self.model = AttentionWalkLayer(self.num_nodes, self.args.emb_dim, self.args.window_size,
                                         self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention)
 
         if self.device == 'cuda':
@@ -117,10 +118,11 @@ class Solver:
         self.model.train()
         train_auc = 0
         test_auc = 0
-        self.transit_mat_series = self.transit_mat_series.to(self.device)
+        # self.transit_mat_series = self.transit_mat_series.to(self.device)
         for epoch in range(self.args.epochs):
             self.optimizer.zero_grad()
-            loss = self.model()
+            self.transit_mat = self.transit_mat.to(self.device)
+            loss = self.model(self.transit_mat)
             loss.backward()
             self.optimizer.step()
             # self.scheduler.step(epoch)

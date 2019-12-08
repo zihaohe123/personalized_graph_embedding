@@ -111,3 +111,4 @@ run.sh
 
 datasets*
 run*.sh
+output/
