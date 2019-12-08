@@ -42,10 +42,10 @@ class AttentionWalkLayer(nn.Module):
 
     def forward(self):
         if self.attention_method in ('global_exponential', 'personalized_exponential'):
-            q_squared = self.q ** 2
+            q_abs = self.q ** 2
             mults = []
             for i in range(self.window_size):
-                mults.append(0.99 * (q_squared ** i) + 0.01)
+                mults.append(0.99 * (q_abs ** i) + 0.01)
             self.attention = torch.stack(mults)
         elif self.attention_method == 'personalized_linear':
             q_neg = -1 * self.q

@@ -177,16 +177,23 @@ class Solver:
         embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
         columns = ["id"] + ["x_" + str(x) for x in range(self.args.emb_dim)]
         embedding = pd.DataFrame(embedding, columns=columns)
-        embedding_path = os.path.join(self.args.output, self.args.dataset+'_embedding.csv')
+        embedding_path = os.path.join(self.args.output, '{}_{}_embedding.csv'.format(self.args.dataset, self.args.attention))
         embedding.to_csv(embedding_path, index=None)
 
     def save_attention(self):
         print("Saving the attention....")
+        if self.args.attention in ('global_exponential', 'personalized_exponential'):
+            q = self.model.q.detach().to('cpu').numpy()
+            q = pd.DataFrame(q)
+
+            q_path = os.path.join(self.args.output, '{}_{}_q.csv'.format(self.args.dataset, self.args.attention))
+            q.to_csv(q_path, index=None)
+
         attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
         indices = np.arange(self.args.window_size).reshape(-1, 1)
         attention = np.concatenate([indices, attention], axis=1)
         attention = pd.DataFrame(attention).rename(columns={0: 'Order'})
-        attention_path = os.path.join(self.args.output, self.args.dataset+'_attention.csv')
+        attention_path = os.path.join(self.args.output, '{}_{}_attention.csv'.format(self.args.dataset, self.args.attention))
         attention.to_csv(attention_path, index=None)
 
     def save(self):
