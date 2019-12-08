@@ -50,7 +50,7 @@ def sample_train_test_Graph(G, data_dir, idx=0, test_ratio=0.5, is_directed =Tru
     test_e = int(e*(test_ratio))
     train_e = e - test_e
 
-    count = 0
+    G_train, count = G.copy(), 0
     if is_directed:
         for edge in edge_list:
             G_train.remove_edge(edge[0],edge[1])
@@ -79,14 +79,22 @@ def sample_train_test_Graph(G, data_dir, idx=0, test_ratio=0.5, is_directed =Tru
     np.save(data_dir+"/train_"+str(idx)+".txt.npy",np.array(G_train.edges()))
     np.save(data_dir+"/test_"+str(idx)+".txt.npy", np.array(test_edge_list))
     
+    count_e, edge_neg_list, edge_list= 0, [], set(edge_list)
     if is_directed:
-        edge_neg_list = set(permutations(np.arange(n)))-set(edge_list)
-    else: 
-        edge_neg_list = set(combinations(np.arange(n)))-set(edge_list)
-    idx_neg = np.random.choice(len(edge_neg_list), e)
-    np.save(data_dir+"/train_"+str(idx)+"neg.txt.npy",np.array(edge_neg_list[idx_neg][:train_e]))
-    np.save(data_dir+"/test_"+str(idx)+"neg.txt.npy", np.array(test_edge_list[idx_neg][train_e:train_e+test_e]))
-    
+        while count_e < e:
+            i,j = np.random.randint(n), np.random.randint(n)
+            if i!=j and (i,j) not in edge_list:
+                edge_neg_list.append((i,j))
+                count_e+=1
+    else:
+        while count_e < e:
+            i,j = np.random.randint(n), np.random.randint(n)
+            if i!=j and (i,j) not in edge_list and (j,i) not in edge_list:
+                edge_neg_list.append((i,j))
+                count_e+=1
+    np.save(data_dir+"/train_"+str(idx)+"neg.txt.npy", np.array(edge_neg_list)[:train_e,:])
+    np.save(data_dir+"/test_"+str(idx)+"neg.txt.npy", np.array(edge_neg_list)[train_e:train_e+test_e,:])
+
     print("Used Time --- %s seconds ---" % (time.time() - start_time))
     
-    return 0  
+    return 0
