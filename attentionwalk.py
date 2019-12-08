@@ -42,7 +42,7 @@ class AttentionWalkLayer(nn.Module):
 
     def forward(self):
         if self.attention_method in ('global_exponential', 'personalized_exponential'):
-            q_abs = self.q ** 2
+            q_abs = torch.abs(self.q)
             mults = []
             for i in range(self.window_size):
                 mults.append(0.99 * (q_abs ** i) + 0.01)
