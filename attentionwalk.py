@@ -75,7 +75,7 @@ class AttentionWalkLayer(nn.Module):
             mults = []
             for i in range(1, self.window_size+1):
                 self.coeff = self.coeff.to(transit_mat.device)
-                mults.append(torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
+                mults.append(self.coeff*torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
             self.attention = torch.stack(mults)
         elif self.attention_method == 'personalized_function':
             self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
