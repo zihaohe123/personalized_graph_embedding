@@ -191,6 +191,13 @@ class Solver:
 
             q_path = os.path.join(self.args.output, '{}_{}_q.csv'.format(self.args.dataset, self.args.attention))
             q.to_csv(q_path, index=None)
+        elif self.args.attention in ['global_gamma', 'personalized_gamma']:
+            k = self.model.k.detach().to('cpu').numpy().reshape(-1, 1)
+            theta = self.model.theta.detach().to('cpu').numpy().reshape(-1, 1)
+            data = np.concatenate((k, theta), axis=1)
+            df = pd.DataFrame(data, columns=['k', 'theta'])
+            path = os.path.join(self.args.output, '{}_{}_k_theta.csv'.format(self.args.dataset, self.args.attention))
+            df.to_csv(path, index=None)
 
         attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
         indices = np.arange(self.args.window_size).reshape(-1, 1)

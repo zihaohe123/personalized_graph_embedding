@@ -14,6 +14,7 @@ def parameter_parser():
                                  'soc-epinions', 'soc-facebook', 'wiki-vote'), help="Dataset to use")
     parser.add_argument("--attention", default="global_vector",
                         choices=('constant', 'global_vector', 'global_exponential',
+                                 'global_gamma', 'personalized_gamma',
                                  'personalized_vector', 'personalized_exponential',
                                  'personalized_linear', 'personalized_function'),
                         help="Attention method to use")
