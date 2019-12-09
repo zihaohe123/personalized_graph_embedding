@@ -96,9 +96,13 @@ class AttentionWalkLayer(nn.Module):
         loss_on_matrices = torch.mean(torch.abs(loss_on_target+loss_on_opposite))
         loss_on_regularization = self.beta * torch.mean(self.attention**2) \
                                  + self.gamma * (torch.mean(self.left_emb**2) + torch.mean(self.right_emb**2))
+
+        if self.q is not None:
+            loss_on_regularization += self.gamma * torch.mean(self.q)**2
+
         if self.k is not None:
             loss_on_regularization += self.gamma * torch.mean(self.k)**2
         if self.theta is not None:
-            loss_on_regularization += self.gamma * torch.mean(self.k)**2
+            loss_on_regularization += self.gamma * torch.mean(self.theta)**2
 
         return loss_on_matrices + loss_on_regularization
