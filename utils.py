@@ -35,7 +35,7 @@ def get_lcc(G, is_directed = True):
 
 
 
-def sample_train_test_Graph(G, data_dir, idx=0, test_ratio=0.5, is_directed =True,):
+def sample_train_test_Graph(G, data_dir, idx=0, test_ratio=0.5, is_directed =True):
     """
     test_ratio <= 0.5
     keep self-loops(eg.ppi) in train_pos. test_pos, train_neg, test_neg have no self-loops. 
