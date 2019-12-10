@@ -24,52 +24,52 @@ def tab_printer(args):
 
     
 
-def feature_calculator_pw(args):
-    """
-    Calculating the feature tensor.
-    :param args: Arguments object.
-    :param graph: NetworkX graph.
-    :return target_matrices: Target tensor.
-    """
-    try:
-        print('Loading exiting train data')
-        G = nx.load_gpickle(args.data_dir+args.graph_name+"/train_"+str(args.idx)+".gpickle")
-    except ExplicitException:
-        try:
-            print('Loading exiting train data')
-            if args.directed: 
-                test_neg_arr = np.load(open(graph_path+graph_name+'/test.directed.neg.txt.npy', 'rb'))
-                G = nx.from_numpy_matrix(a, create_using=nx.DiGraph)
-            else: 
-                test_neg_arr = np.load(open(graph_path+graph_name+'/test.neg.txt.npy', 'rb'))
-                G = nx.from_numpy_matrix(a, create_using=nx.Graph)
-        except ExplicitException::
-            print('Generating train/test data from the original Graph')
-            G = nx.load_gpickle(args.data_dir+args.graph_name+"/graph.gpickle")
-            sample_train_test_Graph(G, args.data_dir, idx=args.idx, test_ratio=args.test_ratio, is_directed =args.is_directed)
-            G = nx.load_gpickle(args.data_dir+args.graph_name+"/train_"+str(args.idx)+".gpickle")
-
-    A = nx.to_scipy_sparse_matrix(G)
-    transit_mat = normalize(A, norm='l1', axis=1).T
-    T_matrices = [transit_mat]
-    T_mat = transit_mat 
-    if args.window_size > 1:
-        for power in tqdm(range(args.window_size-1), desc="Adjacency matrix powers"):
-            T_mat = T_mat.dot(transit_mat)  
-            T_matrices.append(T_mat)
-
-    return T_matrices
-
-
-def get_lcc(G, is_directed = True):
-    if is_directed: 
-        G2 = max(nx.weakly_connected_component_subgraphs(G), key=len)
-    else: 
-        G2 = max(nx.connected_component_subgraphs(G), key=len)
-    tdl_nodes = G2.nodes()
-    nodeListMap = dict(zip(tdl_nodes, range(len(tdl_nodes))))
-    G2 = nx.relabel_nodes(G2, nodeListMap, copy=True)
-    return G2, nodeListMap
+# def feature_calculator_pw(args):
+#     """
+#     Calculating the feature tensor.
+#     :param args: Arguments object.
+#     :param graph: NetworkX graph.
+#     :return target_matrices: Target tensor.
+#     """
+#     try:
+#         print('Loading exiting train data')
+#         G = nx.load_gpickle(args.data_dir+args.graph_name+"/train_"+str(args.idx)+".gpickle")
+#     except ExplicitException:
+#         try:
+#             print('Loading exiting train data')
+#             if args.directed:
+#                 test_neg_arr = np.load(open(graph_path+graph_name+'/test.directed.neg.txt.npy', 'rb'))
+#                 G = nx.from_numpy_matrix(a, create_using=nx.DiGraph)
+#             else:
+#                 test_neg_arr = np.load(open(graph_path+graph_name+'/test.neg.txt.npy', 'rb'))
+#                 G = nx.from_numpy_matrix(a, create_using=nx.Graph)
+#         except ExplicitException::
+#             print('Generating train/test data from the original Graph')
+#             G = nx.load_gpickle(args.data_dir+args.graph_name+"/graph.gpickle")
+#             sample_train_test_Graph(G, args.data_dir, idx=args.idx, test_ratio=args.test_ratio, is_directed =args.is_directed)
+#             G = nx.load_gpickle(args.data_dir+args.graph_name+"/train_"+str(args.idx)+".gpickle")
+#
+#     A = nx.to_scipy_sparse_matrix(G)
+#     transit_mat = normalize(A, norm='l1', axis=1).T
+#     T_matrices = [transit_mat]
+#     T_mat = transit_mat
+#     if args.window_size > 1:
+#         for power in tqdm(range(args.window_size-1), desc="Adjacency matrix powers"):
+#             T_mat = T_mat.dot(transit_mat)
+#             T_matrices.append(T_mat)
+#
+#     return T_matrices
+#
+#
+# def get_lcc(G, is_directed = True):
+#     if is_directed:
+#         G2 = max(nx.weakly_connected_component_subgraphs(G), key=len)
+#     else:
+#         G2 = max(nx.connected_component_subgraphs(G), key=len)
+#     tdl_nodes = G2.nodes()
+#     nodeListMap = dict(zip(tdl_nodes, range(len(tdl_nodes))))
+#     G2 = nx.relabel_nodes(G2, nodeListMap, copy=True)
+#     return G2, nodeListMap
 
 
 
