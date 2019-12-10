@@ -15,6 +15,7 @@ def parameter_parser():
     parser.add_argument("--attention", default="global_vector",
                         choices=('constant', 'global_vector', 'global_exponential',
                                  'global_gamma', 'personalized_gamma',
+                                 'global_quadratic', 'personalized_quadratic',
                                  'personalized_vector', 'personalized_exponential',
                                  'personalized_linear', 'personalized_function'),
                         help="Attention method to use")

@@ -136,6 +136,7 @@ class Solver:
                     self.eval_metrics['attention'] = self.model.attention
                     self.eval_metrics['left_emb'] = self.model.left_emb
                     self.eval_metrics['right_emb'] = self.model.right_emb
+
                 print('Epoch: {:0>3d}/{}, '
                       'Loss: {:.2f}, '
                       'Train AUC: {:.4f}, '
@@ -150,6 +151,10 @@ class Solver:
                                                             self.eval_metrics['test_auc_at_best_train'],
                                                             self.eval_metrics['epoch_at_best_train']+1
                                                             ))
+
+                if epoch - self.eval_metrics['epoch_at_best_train'] >= 50:
+                    print('The model seems to be overfitting...')
+                    break
 
     def link_prediction_eval(self):
         """Calls sess.run(g) and computes AUC metric for test and train."""

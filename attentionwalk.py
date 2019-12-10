@@ -13,6 +13,9 @@ class AttentionWalkLayer(nn.Module):
         self.q = None
         self.k = None
         self.theta = None
+        self.a = None
+        self.b = None
+        self.c = None
 
         if attention == 'constant':
             self.attention = nn.Parameter(torch.ones(window_size), requires_grad=False)
@@ -23,9 +26,13 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'global_gamma':
             self.k = nn.Parameter(torch.ones(1), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(1), requires_grad=True)
-            theta_k = torch.pow(self.theta, self.k)
-            gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
-            self.coeff = (theta_k/gamma_k).detach()
+            # theta_k = torch.pow(self.theta, self.k)
+            # gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
+            # self.coeff = (theta_k/gamma_k).detach()
+        elif attention == 'global_quadratic':
+            self.a = nn.Parameter(torch.tensor([-1.]), requires_grad=True)
+            self.b = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.c = nn.Parameter(torch.ones(1), requires_grad=True)
         elif attention == 'personalized_vector':
             self.attention = nn.Parameter(torch.ones((window_size, n_nodes)), requires_grad=True)
         elif attention == 'personalized_exponential':
@@ -35,9 +42,13 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'personalized_gamma':
             self.k = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
-            theta_k = torch.pow(self.theta, self.k)
-            gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
-            self.coeff = (theta_k/gamma_k).detach()
+            # theta_k = torch.pow(self.theta, self.k)
+            # gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
+            # self.coeff = (theta_k/gamma_k).detach()
+        elif attention == 'personalized_quadratic':
+            self.a = nn.Parameter(torch.tensor([-1.]*n_nodes), requires_grad=True)
+            self.b = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
+            self.c = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
         elif attention == 'personalized_function':
             self.linear = nn.Linear(emb_dim//2, window_size)
             nn.init.zeros_(self.linear.bias)
@@ -73,9 +84,15 @@ class AttentionWalkLayer(nn.Module):
             self.attention = torch.stack(mults)
         elif self.attention_method in ['global_gamma', 'personalized_gamma']:
             mults = []
+            # k = 10*torch.sigmoid(self.k)
+            # theta = 2*torch.sigmoid(self.theta)
             for i in range(1, self.window_size+1):
-                self.coeff = self.coeff.to(transit_mat.device)
-                mults.append(self.coeff*torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
+                mults.append(torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
+            self.attention = torch.stack(mults)
+        elif self.attention_method in ['global_quadratic', 'personalized_quadratic']:
+            mults = []
+            for i in range(1, self.window_size+1):
+                mults.append(self.a*i**2 + self.b*i + self.c)
             self.attention = torch.stack(mults)
         elif self.attention_method == 'personalized_function':
             self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
@@ -99,10 +116,15 @@ class AttentionWalkLayer(nn.Module):
 
         if self.q is not None:
             loss_on_regularization += self.gamma * torch.mean(self.q)**2
-
         if self.k is not None:
             loss_on_regularization += self.gamma * torch.mean(self.k)**2
         if self.theta is not None:
             loss_on_regularization += self.gamma * torch.mean(self.theta)**2
+        if self.a is not None:
+            loss_on_regularization += self.gamma * torch.mean(self.a)**2
+        if self.b is not None:
+            loss_on_regularization += self.gamma * torch.mean(self.b)**2
+        if self.c is not None:
+            loss_on_regularization += self.gamma * torch.mean(self.c)**2
 
         return loss_on_matrices + loss_on_regularization
