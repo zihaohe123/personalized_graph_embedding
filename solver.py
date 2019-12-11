@@ -203,7 +203,14 @@ class Solver:
             df = pd.DataFrame(data, columns=['k', 'theta'])
             path = os.path.join(self.args.output, '{}_{}_k_theta.csv'.format(self.args.dataset, self.args.attention))
             df.to_csv(path, index=None)
-
+        elif self.args.attention in ['global_quadratic', 'personalized_quadratic']:
+            a = self.model.a.detach().to('cpu').numpy().reshape(-1, 1)
+            b = self.model.b.detach().to('cpu').numpy().reshape(-1, 1)
+            c = self.model.c.detach().to('cpu').numpy().reshape(-1, 1)
+            data = np.concatenate((a, b, c), axis=1)
+            df = pd.DataFrame(data, columns=['a', 'b', 'c'])
+            path = os.path.join(self.args.output, '{}_{}_a_b_c.csv'.format(self.args.dataset, self.args.attention))
+            df.to_csv(path, index=None)
         attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
         indices = np.arange(self.args.window_size).reshape(-1, 1)
         attention = np.concatenate([indices, attention], axis=1)
