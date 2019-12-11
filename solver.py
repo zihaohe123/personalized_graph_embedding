@@ -90,7 +90,7 @@ class Solver:
         print('Initializing training....')
 
         self.model = AttentionWalkLayer(self.num_nodes, self.args.emb_dim, self.args.window_size,
-                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention)
+                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention, self.args.normalize)
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
