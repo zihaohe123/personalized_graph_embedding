@@ -4,11 +4,12 @@ import scipy
 
 
 class AttentionWalkLayer(nn.Module):
-    def __init__(self, n_nodes, emb_dim, window_size, n_walks, beta, gamma, attention):
+    def __init__(self, n_nodes, emb_dim, window_size, n_walks, beta, gamma, attention, normalize):
         super(AttentionWalkLayer, self).__init__()
         self.left_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
         self.right_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
         self.attention_method = attention
+        self.normalize_method = normalize
         self.attention = None
         self.q = None
         self.k = None
@@ -97,7 +98,13 @@ class AttentionWalkLayer(nn.Module):
         elif self.attention_method == 'personalized_function':
             self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
 
-        attention_probs = nn.functional.softmax(self.attention, dim=0)  # C
+        if self.normalize_method == 'softmax':
+            attention_probs = nn.functional.softmax(self.attention, dim=0)  # C
+        elif self.normalize_method == 'sum':
+            attention_probs = self.attention / (torch.sum(self.attention, dim=0))
+        else:
+            print('Unexpected normalize method')
+            exit()
 
         transit_mat_power_n = torch.diag(torch.ones(self.n_nodes, dtype=torch.float, device=transit_mat.device))
         weighted_transit_mat = torch.zeros((self.n_nodes, self.n_nodes), dtype=torch.float, device=transit_mat.device)  # VxV
