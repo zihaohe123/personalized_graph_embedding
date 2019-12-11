@@ -10,18 +10,18 @@ Creating an Attention Walk embedding of the default dataset wiki-vote with the s
 python main.py
 ```
 
-Creating an Attention Walk embedding of the ppi dataset with the standard hyperparameter settings.
+Creating an Attention Walk embedding of the ppi dataset with the standard hyperparameter settings using global vector attention.
 
 ```
-python main.py --dataset=ppi
+python main.py --dataset=ppi --attention=global_vector
 ```
 
 
-Creating an Attention Walk embedding of the default dataset with 128 dimensions and learning rate 0.1 using GPU 0.
+Creating an Attention Walk embedding of the default dataset with 128 dimensions and learning rate 0.1 using GPU 0 using personalized vector attention.
 
 
 ```
-python main.py --emb_dim=128 lr=1e-1 --gpu=0
+python main.py --emb_dim=128 lr=1e-1 --gpu=0 --attention=personalized_vector
 
 ```
 

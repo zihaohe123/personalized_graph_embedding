@@ -7,6 +7,7 @@ import pickle
 import os
 from attentionwalk import AttentionWalkLayer
 
+
 class Solver:
     def __init__(self, args):
         self.args = args
@@ -69,25 +70,26 @@ class Solver:
         transit_mat = adj_mat.T
         degree = transit_mat.sum(axis=0)
         transit_mat = transit_mat / (degree + 1e-7)
+        self.transit_mat = torch.from_numpy(transit_mat)
 
-        # degrees = adj_mat.sum(axis=0)  # V
-        # diag = np.diag(degrees)
-        # diag = np.linalg.inv(diag)
-        # transit_mat = np.dot(diag, adj_mat) + 1e-7
-        transit_mat = torch.from_numpy(transit_mat).to(self.device)
-        transit_mat_series = [transit_mat]
-
-        print('Preparing power series...')
-        if self.args.window_size > 1:
-            for i in range(self.args.window_size-1):
-                print('Computing T^{}....'.format(i + 2))
-                transit_mat_series.append(torch.mm(transit_mat_series[-1], transit_mat))
-        self.transit_mat_series = torch.stack(transit_mat_series)  # CxVxV
+        # # degrees = adj_mat.sum(axis=0)  # V
+        # # diag = np.diag(degrees)
+        # # diag = np.linalg.inv(diag)
+        # # transit_mat = np.dot(diag, adj_mat) + 1e-7
+        # transit_mat = torch.from_numpy(transit_mat).to(self.device)
+        # transit_mat_series = [transit_mat]
+        #
+        # print('Preparing power series...')
+        # if self.args.window_size > 1:
+        #     for i in range(self.args.window_size-1):
+        #         print('Computing T^{}....'.format(i + 2))
+        #         transit_mat_series.append(torch.mm(transit_mat_series[-1], transit_mat))
+        # self.transit_mat_series = torch.stack(transit_mat_series)  # CxVxV
 
     def init_training(self):
         print('Initializing training....')
 
-        self.model = AttentionWalkLayer(self.num_nodes, self.transit_mat_series, self.args.emb_dim, self.args.window_size,
+        self.model = AttentionWalkLayer(self.num_nodes, self.args.emb_dim, self.args.window_size,
                                         self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention)
 
         if self.device == 'cuda':
@@ -117,10 +119,11 @@ class Solver:
         self.model.train()
         train_auc = 0
         test_auc = 0
-        self.transit_mat_series = self.transit_mat_series.to(self.device)
+        # self.transit_mat_series = self.transit_mat_series.to(self.device)
         for epoch in range(self.args.epochs):
             self.optimizer.zero_grad()
-            loss = self.model()
+            self.transit_mat = self.transit_mat.to(self.device)
+            loss = self.model(self.transit_mat)
             loss.backward()
             self.optimizer.step()
             # self.scheduler.step(epoch)
@@ -133,6 +136,7 @@ class Solver:
                     self.eval_metrics['attention'] = self.model.attention
                     self.eval_metrics['left_emb'] = self.model.left_emb
                     self.eval_metrics['right_emb'] = self.model.right_emb
+
                 print('Epoch: {:0>3d}/{}, '
                       'Loss: {:.2f}, '
                       'Train AUC: {:.4f}, '
@@ -147,6 +151,10 @@ class Solver:
                                                             self.eval_metrics['test_auc_at_best_train'],
                                                             self.eval_metrics['epoch_at_best_train']+1
                                                             ))
+
+                if epoch - self.eval_metrics['epoch_at_best_train'] >= 50:
+                    print('The model seems to be overfitting...')
+                    break
 
     def link_prediction_eval(self):
         """Calls sess.run(g) and computes AUC metric for test and train."""
@@ -177,20 +185,53 @@ class Solver:
         embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
         columns = ["id"] + ["x_" + str(x) for x in range(self.args.emb_dim)]
         embedding = pd.DataFrame(embedding, columns=columns)
-        embedding_path = os.path.join('output', self.args.dataset+'_embedding.csv')
+        embedding_path = os.path.join(self.args.output, '{}_{}_embedding.csv'.format(self.args.dataset, self.args.attention))
         embedding.to_csv(embedding_path, index=None)
 
     def save_attention(self):
         print("Saving the attention....")
-        attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(-1, 1)
+        if self.args.attention in ('global_exponential', 'personalized_exponential'):
+            q = self.model.q.detach().to('cpu').numpy()
+            q = pd.DataFrame(q)
+
+            q_path = os.path.join(self.args.output, '{}_{}_q.csv'.format(self.args.dataset, self.args.attention))
+            q.to_csv(q_path, index=None)
+        elif self.args.attention in ['global_gamma', 'personalized_gamma']:
+            k = self.model.k.detach().to('cpu').numpy().reshape(-1, 1)
+            theta = self.model.theta.detach().to('cpu').numpy().reshape(-1, 1)
+            data = np.concatenate((k, theta), axis=1)
+            df = pd.DataFrame(data, columns=['k', 'theta'])
+            path = os.path.join(self.args.output, '{}_{}_k_theta.csv'.format(self.args.dataset, self.args.attention))
+            df.to_csv(path, index=None)
+        elif self.args.attention in ['global_quadratic', 'personalized_quadratic']:
+            a = self.model.a.detach().to('cpu').numpy().reshape(-1, 1)
+            b = self.model.b.detach().to('cpu').numpy().reshape(-1, 1)
+            c = self.model.c.detach().to('cpu').numpy().reshape(-1, 1)
+            data = np.concatenate((a, b, c), axis=1)
+            df = pd.DataFrame(data, columns=['a', 'b', 'c'])
+            path = os.path.join(self.args.output, '{}_{}_a_b_c.csv'.format(self.args.dataset, self.args.attention))
+            df.to_csv(path, index=None)
+        attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
         indices = np.arange(self.args.window_size).reshape(-1, 1)
         attention = np.concatenate([indices, attention], axis=1)
-        attention = pd.DataFrame(attention, columns=['Order', 'Weight'])
-        attention_path = os.path.join('output', self.args.dataset+'_attention.csv')
+        attention = pd.DataFrame(attention).rename(columns={0: 'Order'})
+        attention_path = os.path.join(self.args.output, '{}_{}_attention.csv'.format(self.args.dataset, self.args.attention))
         attention.to_csv(attention_path, index=None)
 
+    def save_results(self):
+        print("Saving the results....")
+        results = 'Best Train AUC: {:.4f}, ' \
+                  'Test AUC at Best Train: {:.4f}, ' \
+                  'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
+                    self.eval_metrics['test_auc_at_best_train'],
+                    self.eval_metrics['epoch_at_best_train'])
+        path = os.path.join(self.args.output, '{}_{}_results.txt'.format(self.args.dataset, self.args.attention))
+        with open(path, mode='w') as f:
+            f.write(results)
+
     def save(self):
-        if not os.path.exists('output'):
-            os.mkdir('output')
+        if not os.path.exists(self.args.output):
+            os.mkdir(self.args.output)
         self.save_embedding()
         self.save_attention()
+        self.save_results()

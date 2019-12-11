@@ -110,3 +110,5 @@ run.sh
 .idea/
 
 datasets*
+run*.sh
+output/
