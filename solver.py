@@ -282,8 +282,14 @@ class Solver:
         print("Saving the results....")
         results = 'Best Train AUC: {:.4f}, ' \
                   'Test AUC at Best Train: {:.4f}, ' \
+                  'Test MAP at Best Train: {:.4f}, ' \
+                  'Test Micro NC at Best Train: {:.4f}, ' \
+                  'Test Macro NC at Best Train: {:.4f}, ' \
                   'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
                     self.eval_metrics['test_auc_at_best_train'],
+                    self.eval_metrics['test_map_at_best_train'],
+                    self.eval_metrics['test_micro_at_best_train'],
+                    self.eval_metrics['test_macro_at_best_train'],
                     self.eval_metrics['epoch_at_best_train'])
         path = os.path.join(self.args.output, '{}_{}_results.txt'.format(self.args.dataset, self.args.attention))
         with open(path, mode='w') as f:
