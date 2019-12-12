@@ -11,7 +11,8 @@ def parameter_parser():
 
     parser.add_argument("--dataset", default="wiki-vote",
                         choices=('ca-AstroPh', 'ca-HepTh', 'ppi',
-                                 'soc-epinions', 'soc-facebook', 'wiki-vote', 'cora', 'blogcatalog', 'citeseer', 'ppi2', 'wikipedia'), help="Dataset to use")
+                                 'soc-epinions', 'soc-facebook', 'wiki-vote',
+                                 'cora', 'blogcatalog', 'citeseer', 'ppi2', 'wikipedia'), help="Dataset to use")
     parser.add_argument("--attention", default="global_vector",
                         choices=('constant', 'global_vector', 'global_exponential',
                                  'global_gamma', 'personalized_gamma',

@@ -11,6 +11,7 @@ import pdb
 import os
 import argparse
 
+
 def tab_printer(args):
     """
     Function to print the logs in a nice tabular format.
@@ -21,8 +22,6 @@ def tab_printer(args):
     t = Texttable()
     t.add_rows([["Parameter", "Value"]] + [[k.replace("_", " ").capitalize(), args[k]] for k in keys])
     print(t.draw())
-
-
 
 
 # def feature_calculator_pw(args):
@@ -60,9 +59,9 @@ def tab_printer(args):
 #             T_matrices.append(T_mat)
 #
 #     return T_matrices
-#
-#
-def get_lcc(G, is_directed = True):
+
+
+def get_lcc(G, is_directed=True):
     if is_directed:
         G2 = max(nx.weakly_connected_component_subgraphs(G), key=len)
     else:
@@ -72,7 +71,8 @@ def get_lcc(G, is_directed = True):
     G2 = nx.relabel_nodes(G2, nodeListMap, copy=True)
     return G2, nodeListMap
 
-def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
+
+def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
     """
     test_ratio <= 0.5
     keep self-loops(eg.ppi) in train_pos. test_pos, train_neg, test_neg have no self-loops.
@@ -84,41 +84,43 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     edge_list, test_edge_list = list(G.edges()), []
     random.shuffle(edge_list)
     e, n = len(edge_list), len(G.nodes())
-    test_e = int(e*(test_ratio))
+    test_e = int(e*test_ratio)
     train_e = e - test_e
 
     G_train, count = G.copy(), 0
     if count < test_e:
         if is_directed:
             for edge in edge_list:
-                G_train.remove_edge(edge[0],edge[1])
-                if nx.is_weakly_connected(G_train) and len(G_train.nodes())==n and edge[0]!= edge[1]:
+                G_train.remove_edge(edge[0], edge[1])
+                if nx.is_weakly_connected(G_train) and len(G_train.nodes()) == n and edge[0] != edge[1]:
                     test_edge_list.append(edge)
-                    count+=1
-                else: G_train.add_edge(edge[0],edge[1])
-                if count == test_e: break
+                    count += 1
+                else:
+                    G_train.add_edge(edge[0], edge[1])
+                if count == test_e:
+                    break
 
         else:
             for edge in edge_list:
-                G_train.remove_edge(edge[0],edge[1])
-                if nx.is_connected(G_train) and len(G_train.nodes())==n:
+                G_train.remove_edge(edge[0], edge[1])
+                if nx.is_connected(G_train) and len(G_train.nodes()) == n:
                     test_edge_list.append(list(edge))
-                    count+=1
-                else: G_train.add_edge(edge[0],edge[1])
-                if count == test_e: break
+                    count += 1
+                else:
+                    G_train.add_edge(edge[0], edge[1])
+                if count == test_e:
+                    break
     if count < test_e:
         print('Test ratio is too large. Please lower your test ratio!')
 
     print("Train Graph", nx.info(G_train))
     print("The number of test edges", len(test_edge_list))
 
-    nx.write_gpickle(G_train, data_dir+"/train.gpickle")
-    np.save(data_dir+"/train.txt.npy", np.array(G_train.edges()))
-    np.save(data_dir+"/test.txt.npy", np.array(test_edge_list))
-    with open(data_dir+'/nodelistmap.pickle', 'wb') as f:
+    nx.write_gpickle(G_train, data_dir + "/train.gpickle")
+    np.save(os.path.join(data_dir, "train.txt.npy"), np.array(G_train.edges()))
+    np.save(os.path.join(data_dir, "test.txt.npy"), np.array(test_edge_list))
+    with open(os.path.join(data_dir, 'nodelistmap.pickle'), 'wb') as f:
         pickle.dump(nodeListMap, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-
 
     ## for small graphs
     # if is_directed:
@@ -129,25 +131,25 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     # np.save(data_dir+"/train_"+str(idx)+"neg.txt.npy", np.array(edge_neg_list)[idx_neg[:train_e],:])
     # np.save(data_dir+"/test_"+str(idx)+"neg.txt.npy", np.array(edge_neg_list)[idx_neg[train_e:train_e+test_e],:])
 
-    count_e, edge_neg_list, edge_list= 0, [], set(edge_list)
+    count_e, edge_neg_list, edge_list = 0, [], set(edge_list)
     if is_directed:
         while count_e < e:
-            i,j = np.random.randint(n), np.random.randint(n)
-            if i!=j and (i,j) not in edge_list and (i,j) not in edge_neg_list:
-                edge_neg_list.append((i,j))
-                count_e+=1
+            i, j = np.random.randint(n), np.random.randint(n)
+            if i != j and (i, j) not in edge_list and (i, j) not in edge_neg_list:
+                edge_neg_list.append((i, j))
+                count_e += 1
     else:
         while count_e < e:
-            i,j = np.random.randint(n), np.random.randint(n)
-            if i!=j and (i,j) not in edge_list and (j,i) not in edge_list \
-                        and (i,j) not in edge_neg_list and (j,i) not in edge_neg_list:
-                edge_neg_list.append((i,j))
-                count_e+=1
-    np.save(data_dir+"/train.neg.txt.npy", np.array(edge_neg_list)[:train_e,:])
+            i, j = np.random.randint(n), np.random.randint(n)
+            if i != j and (i, j) not in edge_list and (j, i) not in edge_list \
+                    and (i, j) not in edge_neg_list and (j, i) not in edge_neg_list:
+                edge_neg_list.append((i, j))
+                count_e += 1
+    np.save(os.path.join(data_dir, "train.neg.txt.npy"), np.array(edge_neg_list)[:train_e, :])
     if is_directed:
-        np.save(data_dir+"/test.directed.neg.txt.npy", np.array(edge_neg_list)[train_e:train_e+test_e,:])
+        np.save(os.path.join(data_dir, "test.directed.neg.txt.npy"), np.array(edge_neg_list)[train_e:train_e + test_e, :])
     else:
-        np.save(data_dir+"/test.neg.txt.npy", np.array(edge_neg_list)[train_e:train_e+test_e,:])
+        np.save(os.path.join(data_dir, "test.neg.txt.npy"), np.array(edge_neg_list)[train_e:train_e + test_e, :])
     print("Used Time --- %s seconds ---" % (time.time() - start_time))
 
     return 0
@@ -155,7 +157,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Prepare Data')
-    parser.add_argument('--data_dir', type=str, help='Data dir')
+    parser.add_argument('--data_dir', type=str, default='datasets/citeseer', help='Data dir')
     parser.add_argument('--test_ratio', type=float, default=0.5, help='Data dir')
     args = parser.parse_args()
     print(args)
