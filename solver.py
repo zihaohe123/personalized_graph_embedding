@@ -6,6 +6,7 @@ from sklearn import metrics
 import pickle
 import os
 from attentionwalk import AttentionWalkLayer
+from evaluation import *
 
 
 class Solver:
@@ -128,7 +129,7 @@ class Solver:
             self.optimizer.step()
             # self.scheduler.step(epoch)
             if epoch % 10 == 0 or epoch+1 == self.args.epochs:
-                train_auc, test_auc = self.link_prediction_eval()
+                train_auc, test_auc, test_map = self.link_prediction_eval()
                 if train_auc > self.eval_metrics['best_train_auc']:
                     self.eval_metrics['best_train_auc'] = train_auc
                     self.eval_metrics['test_auc_at_best_train'] = test_auc
@@ -136,6 +137,7 @@ class Solver:
                     self.eval_metrics['attention'] = self.model.attention
                     self.eval_metrics['left_emb'] = self.model.left_emb
                     self.eval_metrics['right_emb'] = self.model.right_emb
+                    self.eval_metrics['test_map_at_best_train'] = test_map
 
                 print('Epoch: {:0>3d}/{}, '
                       'Loss: {:.2f}, '
@@ -143,12 +145,14 @@ class Solver:
                       'Test AUC: {:.4f}, '
                       'Best Train AUC: {:.4f}, '
                       'Test AUC at Best Train: {:.4f}, '
+                      'Test MAP at Best Train: {:.4f}, '
                       'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
                                                             loss,
                                                             train_auc,
                                                             test_auc,
                                                             self.eval_metrics['best_train_auc'],
                                                             self.eval_metrics['test_auc_at_best_train'],
+                                                            self.eval_metrics['test_map_at_best_train'],
                                                             self.eval_metrics['epoch_at_best_train']+1
                                                             ))
 
@@ -175,7 +179,13 @@ class Solver:
         test_y_pred = np.concatenate([test_neg_prods, test_pos_prods], 0)
         test_auc = metrics.roc_auc_score(test_y, test_y_pred)
 
-        return train_auc, test_auc
+        test_map = eval_link_prediction(self.model.left_emb,
+                                        self.model.right_emb,
+                                        self.test_pos_arr,
+                                        self.train_pos_arr,
+                                        is_directed=self.is_directed)
+
+        return train_auc, test_auc, test_map
 
     def save_embedding(self):
         print("Saving the embedding....")
