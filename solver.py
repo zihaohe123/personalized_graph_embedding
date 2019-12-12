@@ -182,17 +182,21 @@ class Solver:
         train_auc = metrics.roc_auc_score(train_y, train_y_pred)
 
         # Compute test auc:
-        test_pos_prods = scores[self.test_pos_arr[:, 0], self.test_pos_arr[:, 1]]
-        test_neg_prods = scores[self.test_neg_arr[:, 0], self.test_neg_arr[:, 1]]
-        test_y = [0] * len(test_neg_prods) + [1] * len(test_pos_prods)
-        test_y_pred = np.concatenate([test_neg_prods, test_pos_prods], 0)
-        test_auc = metrics.roc_auc_score(test_y, test_y_pred)
+        if len(self.test_pos_arr) > 0:
+            test_pos_prods = scores[self.test_pos_arr[:, 0], self.test_pos_arr[:, 1]]
+            test_neg_prods = scores[self.test_neg_arr[:, 0], self.test_neg_arr[:, 1]]
+            test_y = [0] * len(test_neg_prods) + [1] * len(test_pos_prods)
+            test_y_pred = np.concatenate([test_neg_prods, test_pos_prods], 0)
+            test_auc = metrics.roc_auc_score(test_y, test_y_pred)
 
-        test_map = eval_link_prediction(self.model.left_emb,
-                                        self.model.right_emb,
-                                        self.test_pos_arr,
-                                        self.train_pos_arr,
-                                        is_directed=self.is_directed)
+            test_map = eval_link_prediction(self.model.left_emb,
+                                            self.model.right_emb,
+                                            self.test_pos_arr,
+                                            self.train_pos_arr,
+                                            is_directed=self.is_directed)
+        else:
+            test_auc = 0
+            test_map = 0
 
         return train_auc, test_auc, test_map
 
