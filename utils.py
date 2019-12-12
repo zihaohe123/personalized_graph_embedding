@@ -158,7 +158,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Prepare Data')
     parser.add_argument('--data_dir', type=str, default='datasets/citeseer', help='Data dir')
-    parser.add_argument('--test_ratio', type=float, default=0.5, help='Data dir')
+    parser.add_argument('--test_ratio', type=float, default=0.5, help='Test ratio')
     args = parser.parse_args()
     print(args)
 

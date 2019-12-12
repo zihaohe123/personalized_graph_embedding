@@ -23,7 +23,8 @@ def parameter_parser():
     parser.add_argument("--normalize", default="softmax",
                         choices=('softmax', 'sum'),
                         help="Normalize method to use. Sum method assume all entries are positive")
-    parser.add_argument("--emb_dim", type=int, default=64, help="Number of dimensions. Default is 4.")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Temperature (scaling factor) for before softmax. Default is 1.")
+    parser.add_argument("--emb_dim", type=int, default=64, help="Number of dimensions. Default is 64.")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of gradient descent iterations. Default is 1000.")
     parser.add_argument("--window-size", type=int, default=10, help="Skip-gram window size. Default is 10.")
     parser.add_argument("--n-walks", type=int, default=80, help="Number of random walks. Default is 80.")
@@ -32,5 +33,6 @@ def parameter_parser():
     parser.add_argument("--lr", type=float, default=5e-1, help="Gradient descent learning rate. Default is 0.5.")
     parser.add_argument("--gpu", type=str, default='', help="Which GPUs to use. Default is None.")
     parser.add_argument("--output", type=str, default='output', help="Output path")
+    parser.add_argument("--shared", action='store_true', help='Shared left and right embedding')
 
     return parser.parse_args()

@@ -116,7 +116,7 @@ def eval_node_classification(X_train, Y_train, X_test, Y_test):
 
     # y_train = (n_sample, n_classes)
     top_k_list = list(Y_test.sum(axis=1))
-    classif2 = TopKRanker(lr())
+    classif2 = TopKRanker(lr(solver='liblinear'))
     classif2.fit(X_train, Y_train)
     prediction = classif2.predict(X_test, top_k_list)
     micro = f1_score(Y_test, prediction, average='micro')

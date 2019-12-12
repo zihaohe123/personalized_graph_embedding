@@ -4,10 +4,13 @@ import scipy
 
 
 class AttentionWalkLayer(nn.Module):
-    def __init__(self, n_nodes, emb_dim, window_size, n_walks, beta, gamma, attention, normalize):
+    def __init__(self, n_nodes, emb_dim, window_size, n_walks, beta, gamma, attention, normalize, temperature, shared):
         super(AttentionWalkLayer, self).__init__()
         self.left_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
-        self.right_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
+        if shared:
+            self.right_emb = self.left_emb
+        else:
+            self.right_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
         self.attention_method = attention
         self.normalize_method = normalize
         self.attention = None
@@ -17,6 +20,7 @@ class AttentionWalkLayer(nn.Module):
         self.a = None
         self.b = None
         self.c = None
+        self.temperature = temperature
 
         if attention == 'constant':
             self.attention = nn.Parameter(torch.ones(window_size), requires_grad=False)
@@ -43,9 +47,6 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'personalized_gamma':
             self.k = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
-            # theta_k = torch.pow(self.theta, self.k)
-            # gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
-            # self.coeff = (theta_k/gamma_k).detach()
         elif attention == 'personalized_quadratic':
             self.a = nn.Parameter(torch.tensor([-1.]*n_nodes), requires_grad=True)
             self.b = nn.Parameter(torch.ones(n_nodes), requires_grad=True)

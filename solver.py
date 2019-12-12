@@ -78,6 +78,9 @@ class Solver:
         if not self.is_directed:
             adj_mat[train_edges[:, 1], train_edges[:, 0]] = 1.0
 
+        print('#Nodes', self.num_nodes)
+        print('#Edges', len(train_edges))
+        print('Is_directed', self.is_directed)
         print('Preparing graph...')
 
         # how to use GPUs
@@ -108,7 +111,7 @@ class Solver:
         print('Initializing training....')
 
         self.model = AttentionWalkLayer(self.num_nodes, self.args.emb_dim, self.args.window_size,
-                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention, self.args.normalize)
+                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention, self.args.normalize, self.args.temperature, self.args.shared)
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
@@ -144,6 +147,7 @@ class Solver:
             loss = self.model(self.transit_mat)
             loss.backward()
             self.optimizer.step()
+
             # self.scheduler.step(epoch)
             if epoch % 10 == 0 or epoch+1 == self.args.epochs:
                 train_auc, test_auc, test_map = self.link_prediction_eval()
@@ -192,7 +196,10 @@ class Solver:
             print("Node labels are not provided...")
             return micro, macro
 
-        embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
+        if self.args.shared:
+            embeds = self.model.left_emb.detach().to('cpu').numpy()
+        else:
+            embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
 
         temp_map = {v:k for k, v in self.node_list_map.items()}
 
