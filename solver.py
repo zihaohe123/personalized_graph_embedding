@@ -201,7 +201,8 @@ class Solver:
 
         X_tr, X_te, y_tr, y_te = train_test_split(embeds,
                                                   labels,
-                                                  test_size=test_ratio)
+                                                  test_size=test_ratio,
+                                                  random_state=0)
 
         micro, macro = eval_node_classification(X_tr, y_tr, X_te, y_te)
 
