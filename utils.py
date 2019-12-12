@@ -88,24 +88,24 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     train_e = e - test_e
 
     G_train, count = G.copy(), 0
-    if is_directed:
-        for edge in edge_list:
-            G_train.remove_edge(edge[0],edge[1])
-            if nx.is_weakly_connected(G_train) and len(G_train.nodes())==n and edge[0]!= edge[1]:
-                test_edge_list.append(edge)
-                count+=1
-            else: G_train.add_edge(edge[0],edge[1])
-            if count == test_e: break
+    if count < test_e:
+        if is_directed:
+            for edge in edge_list:
+                G_train.remove_edge(edge[0],edge[1])
+                if nx.is_weakly_connected(G_train) and len(G_train.nodes())==n and edge[0]!= edge[1]:
+                    test_edge_list.append(edge)
+                    count+=1
+                else: G_train.add_edge(edge[0],edge[1])
+                if count == test_e: break
 
-    else:
-        for edge in edge_list:
-            G_train.remove_edge(edge[0],edge[1])
-            if nx.is_connected(G_train) and len(G_train.nodes())==n:
-                test_edge_list.append(list(edge))
-                count+=1
-            else: G_train.add_edge(edge[0],edge[1])
-            if count == test_e: break
-
+        else:
+            for edge in edge_list:
+                G_train.remove_edge(edge[0],edge[1])
+                if nx.is_connected(G_train) and len(G_train.nodes())==n:
+                    test_edge_list.append(list(edge))
+                    count+=1
+                else: G_train.add_edge(edge[0],edge[1])
+                if count == test_e: break
     if count < test_e:
         print('Test ratio is too large. Please lower your test ratio!')
 
