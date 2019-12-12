@@ -79,7 +79,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     """
     start_time = time.time()
     print('Original Graph', nx.info(G))
-    G = get_lcc(G, is_directed)[0]
+    G, nodeListMap = get_lcc(G, is_directed)
     print('LCC Graph', nx.info(G))
     edge_list, test_edge_list = list(G.edges()), []
     random.shuffle(edge_list)
@@ -115,6 +115,9 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     nx.write_gpickle(G_train, data_dir+"/train.gpickle")
     np.save(data_dir+"/train.txt.npy", np.array(G_train.edges()))
     np.save(data_dir+"/test.txt.npy", np.array(test_edge_list))
+    with open('nodelistmap.pickle', 'wb') as f:
+        pickle.dump(nodeListMap, f, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 
     ## for small graphs
