@@ -202,10 +202,10 @@ class Solver:
             embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
 
         temp_map = {v:k for k, v in self.node_list_map.items()}
+        embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
+        temp_map = {v: k for k, v in self.node_list_map.items()}
 
         labels = np.array([self.node_labels[temp_map[i]] for i in range(self.num_nodes)])
-
-
         X_tr, X_te, y_tr, y_te = train_test_split(embeds,
                                                   labels,
                                                   test_size=test_ratio,
