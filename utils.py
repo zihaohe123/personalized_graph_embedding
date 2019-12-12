@@ -115,7 +115,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
     nx.write_gpickle(G_train, data_dir+"/train.gpickle")
     np.save(data_dir+"/train.txt.npy", np.array(G_train.edges()))
     np.save(data_dir+"/test.txt.npy", np.array(test_edge_list))
-    with open(data_dir + '/nodelistmap.pickle', 'wb') as f:
+    with open(data_dir+'/nodelistmap.pickle', 'wb') as f:
         pickle.dump(nodeListMap, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 

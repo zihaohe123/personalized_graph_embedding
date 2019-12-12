@@ -9,6 +9,7 @@ from attentionwalk import AttentionWalkLayer
 from evaluation import *
 import pdb
 import networkx as nx
+from sklearn.model_selection import train_test_split
 
 
 class Solver:
@@ -26,6 +27,8 @@ class Solver:
         self.train_pos_arr = None
         self.train_neg_arr = None
         self.transit_mat_series = None
+        self.node_labels = None
+        self.node_list_map = None
 
         self.prepare_graph()
         self.init_training()
@@ -58,6 +61,10 @@ class Solver:
         else:
             G = nx.read_gpickle(os.path.join(dataset_dir, 'train.gpickle'))
             self.num_nodes = len(G.nodes())
+            label_path = os.path.join(dataset_dir, 'node_labels.pickle')
+            self.node_labels = pickle.load(open(label_path, 'rb')).toarray()
+            label_map_path = os.path.join(dataset_dir, 'nodelistmap.pickle')
+            self.node_list_map = pickle.load(open(label_map_path, 'rb'))
 
         self.test_neg_arr = test_neg_arr
         self.test_pos_arr = test_pos_arr
@@ -139,6 +146,8 @@ class Solver:
             # self.scheduler.step(epoch)
             if epoch % 10 == 0 or epoch+1 == self.args.epochs:
                 train_auc, test_auc, test_map = self.link_prediction_eval()
+                nc_micro, nc_macro = self.node_classification_eval()
+
                 if train_auc > self.eval_metrics['best_train_auc']:
                     self.eval_metrics['best_train_auc'] = train_auc
                     self.eval_metrics['test_auc_at_best_train'] = test_auc
@@ -147,6 +156,8 @@ class Solver:
                     self.eval_metrics['left_emb'] = self.model.left_emb
                     self.eval_metrics['right_emb'] = self.model.right_emb
                     self.eval_metrics['test_map_at_best_train'] = test_map
+                    self.eval_metrics['test_micro_at_best_train'] = nc_micro
+                    self.eval_metrics['test_macro_at_best_train'] = nc_macro
 
                 print('Epoch: {:0>3d}/{}, '
                       'Loss: {:.2f}, '
@@ -155,6 +166,8 @@ class Solver:
                       'Best Train AUC: {:.4f}, '
                       'Test AUC at Best Train: {:.4f}, '
                       'Test MAP at Best Train: {:.4f}, '
+                      'Test Micro NC at Best Train: {:.4f}, '
+                      'Test Macro NC at Best Train: {:.4f}, '
                       'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
                                                             loss,
                                                             train_auc,
@@ -162,12 +175,36 @@ class Solver:
                                                             self.eval_metrics['best_train_auc'],
                                                             self.eval_metrics['test_auc_at_best_train'],
                                                             self.eval_metrics['test_map_at_best_train'],
+                                                            self.eval_metrics['test_micro_at_best_train'],
+                                                            self.eval_metrics['test_macro_at_best_train'],
                                                             self.eval_metrics['epoch_at_best_train']+1
                                                             ))
 
                 if epoch - self.eval_metrics['epoch_at_best_train'] >= 50:
                     print('The model seems to be overfitting...')
                     break
+
+    def node_classification_eval(self, test_ratio=0.3):
+        micro, macro = 0, 0
+
+        if self.node_labels is None:
+            print("Node labels are not provided...")
+            return micro, macro
+
+        embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
+
+        temp_map = {v:k for k, v in self.node_list_map.items()}
+
+        labels = np.array([self.node_labels[temp_map[i]] for i in range(self.num_nodes)])
+
+
+        X_tr, X_te, y_tr, y_te = train_test_split(embeds,
+                                                  labels,
+                                                  test_size=test_ratio)
+
+        micro, macro = eval_node_classification(X_tr, y_tr, X_te, y_te)
+
+        return micro, macro
 
     def link_prediction_eval(self):
         """Calls sess.run(g) and computes AUC metric for test and train."""
