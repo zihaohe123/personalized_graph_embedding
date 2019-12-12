@@ -1,5 +1,5 @@
 from solver import Solver
-from parser import parameter_parser
+from param_parser import parameter_parser
 from utils import tab_printer
 import os
 

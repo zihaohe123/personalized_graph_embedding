@@ -7,6 +7,8 @@ import pickle
 import os
 from attentionwalk import AttentionWalkLayer
 from evaluation import *
+import pdb
+import networkx as nx
 
 
 class Solver:
@@ -33,12 +35,14 @@ class Solver:
 
         dataset_dir = os.path.join('datasets', self.args.dataset)
 
-        if self.is_directed:
-            test_neg_file = os.path.join(dataset_dir, 'test.directed.neg.txt.npy')
-            test_neg_arr = np.load(open(test_neg_file, 'rb'))
+        test_neg_file = os.path.join(dataset_dir, 'test.directed.neg.txt.npy')
+        if os.path.exists(test_neg_file):
+            self.is_directed = True
         else:
+            self.is_directed = False
             test_neg_file = os.path.join(dataset_dir, 'test.neg.txt.npy')
-            test_neg_arr = np.load(open(test_neg_file, 'rb'))
+        test_neg_arr = np.load(open(test_neg_file, 'rb'))
+
         test_pos_file = os.path.join(dataset_dir, 'test.txt.npy')
         test_pos_arr = np.load(open(test_pos_file, 'rb'))
 
@@ -47,8 +51,13 @@ class Solver:
         train_pos_arr = np.load(open(train_pos_file, 'rb'))
         train_neg_arr = np.load(open(train_neg_file, 'rb'))
 
-        index = pickle.load(open(os.path.join(dataset_dir, 'index.pkl'), 'rb'))
-        self.num_nodes = len(index['index'])
+        index_file = os.path.join(dataset_dir, 'index.pkl')
+        if os.path.exists(index_file):
+            index = pickle.load(open(index_file, 'rb'))
+            self.num_nodes = len(index['index'])
+        else:
+            G = nx.read_gpickle(os.path.join(dataset_dir, 'train.gpickle'))
+            self.num_nodes = len(G.nodes())
 
         self.test_neg_arr = test_neg_arr
         self.test_pos_arr = test_pos_arr
