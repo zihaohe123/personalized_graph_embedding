@@ -165,7 +165,7 @@ class Solver:
                     self.eval_metrics['test_macro_at_best_train'] = nc_macro
 
                 print('Epoch: {:0>3d}/{}, '
-                      'Loss: {:.2f}, '
+                      'Loss: {:.4f}, '
                       'Train AUC: {:.4f}, '
                       'Test AUC: {:.4f}, '
                       'Best Train AUC: {:.4f}, '

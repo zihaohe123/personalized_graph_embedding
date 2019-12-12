@@ -100,7 +100,7 @@ class AttentionWalkLayer(nn.Module):
             self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
 
         if self.normalize_method == 'softmax':
-            attention_probs = nn.functional.softmax(self.attention, dim=0)  # C
+            attention_probs = nn.functional.softmax(self.attention * self.temperature, dim=0)  # C
         elif self.normalize_method == 'sum':
             attention_probs = self.attention / (torch.sum(self.attention, dim=0))
         else:
