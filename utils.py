@@ -152,6 +152,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed =True):
 
     return 0
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Prepare Data')
     parser.add_argument('--data_dir', type=str, help='Data dir')

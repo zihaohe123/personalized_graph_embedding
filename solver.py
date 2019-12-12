@@ -26,7 +26,8 @@ class Solver:
         self.test_pos_arr = None
         self.train_pos_arr = None
         self.train_neg_arr = None
-        self.transit_mat_series = None
+        self.transit_mat = None
+        self.eval_metrics = None
         self.node_labels = None
         self.node_list_map = None
 
