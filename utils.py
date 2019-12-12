@@ -158,10 +158,21 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Prepare Data')
     parser.add_argument('--data_dir', type=str, default='datasets/citeseer', help='Data dir')
-    parser.add_argument('--test_ratio', type=float, default=0.5, help='Test ratio')
+    parser.add_argument('--task', default='nc', choices=('nc', 'lp'), help='Task to generate data for')
+    parser.add_argument('--seed', default=0, type=int, help='Random seed')
     args = parser.parse_args()
     print(args)
 
     filename = os.path.join(args.data_dir, 'graph.gpickle')
     G = nx.read_gpickle(filename)
-    sample_train_test_Graph(G, args.data_dir, test_ratio=args.test_ratio, is_directed=G.is_directed())
+
+    if args.task == 'nc':
+        test_ratio = 0.0
+    else:
+        test_ratio = 0.5
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    save_dir = '{}_{}_{}'.format(args.data_dir, args.task, args.seed)
+    os.makedirs(save_dir, exist_ok=True)
+    sample_train_test_Graph(G, save_dir, test_ratio=test_ratio, is_directed=G.is_directed())
