@@ -17,6 +17,7 @@ def parameter_parser():
                         choices=('constant', 'global_vector', 'global_exponential',
                                  'global_gamma', 'personalized_gamma',
                                  'global_quadratic', 'personalized_quadratic',
+                                 'global_cubic', 'personalized_cubic',
                                  'personalized_vector', 'personalized_exponential',
                                  'personalized_linear', 'personalized_function'),
                         help="Attention method to use")

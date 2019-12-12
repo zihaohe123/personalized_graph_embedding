@@ -20,6 +20,7 @@ class AttentionWalkLayer(nn.Module):
         self.a = None
         self.b = None
         self.c = None
+        self.d = None
         self.temperature = temperature
 
         if attention == 'constant':
@@ -31,13 +32,15 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'global_gamma':
             self.k = nn.Parameter(torch.ones(1), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(1), requires_grad=True)
-            # theta_k = torch.pow(self.theta, self.k)
-            # gamma_k = torch.from_numpy(scipy.special.gamma(self.k.detach().numpy()))
-            # self.coeff = (theta_k/gamma_k).detach()
         elif attention == 'global_quadratic':
             self.a = nn.Parameter(torch.tensor([-1.]), requires_grad=True)
             self.b = nn.Parameter(torch.ones(1), requires_grad=True)
             self.c = nn.Parameter(torch.ones(1), requires_grad=True)
+        elif attention == 'global_cubic':
+            self.a = nn.Parameter(torch.tensor([-1.]), requires_grad=True)
+            self.b = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.c = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.d = nn.Parameter(torch.ones(1), requires_grad=True)
         elif attention == 'personalized_vector':
             self.attention = nn.Parameter(torch.ones((window_size, n_nodes)), requires_grad=True)
         elif attention == 'personalized_exponential':
@@ -51,6 +54,11 @@ class AttentionWalkLayer(nn.Module):
             self.a = nn.Parameter(torch.tensor([-1.]*n_nodes), requires_grad=True)
             self.b = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
             self.c = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
+        elif attention == 'personalized_cubic':
+            self.a = nn.Parameter(torch.tensor([-1.]*n_nodes), requires_grad=True)
+            self.b = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
+            self.c = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
+            self.d = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
         elif attention == 'personalized_function':
             self.linear = nn.Linear(emb_dim//2, window_size)
             nn.init.zeros_(self.linear.bias)
@@ -96,6 +104,11 @@ class AttentionWalkLayer(nn.Module):
             for i in range(1, self.window_size+1):
                 mults.append(self.a*i**2 + self.b*i + self.c)
             self.attention = torch.stack(mults)
+        elif self.attention_method in ['global_cubic', 'personalized_cubic']:
+            mults = []
+            for i in range(1, self.window_size+1):
+                mults.append(self.a*i**3 + self.b*i**2 + self.c*i + self.d)
+            self.attention = torch.stack(mults)
         elif self.attention_method == 'personalized_function':
             self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
 
@@ -134,5 +147,7 @@ class AttentionWalkLayer(nn.Module):
             loss_on_regularization += self.gamma * torch.mean(self.b)**2
         if self.c is not None:
             loss_on_regularization += self.gamma * torch.mean(self.c)**2
+        if self.d is not None:
+            loss_on_regularization += self.gamma * torch.mean(self.d)**2
 
         return loss_on_matrices + loss_on_regularization
