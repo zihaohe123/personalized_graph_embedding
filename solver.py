@@ -30,6 +30,8 @@ class Solver:
         self.eval_metrics = None
         self.node_labels = None
         self.node_list_map = None
+        self.task = 'lp'    # link prediction (lp) or node classification (nc)
+        self.eval_metrics = {}
 
         self.prepare_graph()
         self.init_training()
@@ -38,6 +40,9 @@ class Solver:
         print('Loading graph....')
 
         dataset_dir = os.path.join('datasets', self.args.dataset)
+
+        if 'nc' in self.args.dataset:
+            self.task = 'nc'    # node classification
 
         test_neg_file = os.path.join(dataset_dir, 'test.directed.neg.txt.npy')
         if os.path.exists(test_neg_file):
@@ -56,16 +61,17 @@ class Solver:
         train_neg_arr = np.load(open(train_neg_file, 'rb'))
 
         index_file = os.path.join(dataset_dir, 'index.pkl')
-        if os.path.exists(index_file):
+        if os.path.exists(index_file):      # sami's dataset, must be lp task
             index = pickle.load(open(index_file, 'rb'))
             self.num_nodes = len(index['index'])
         else:
             G = nx.read_gpickle(os.path.join(dataset_dir, 'train.gpickle'))
             self.num_nodes = len(G.nodes())
-            label_path = os.path.join(dataset_dir, 'node_labels.pickle')
-            self.node_labels = pickle.load(open(label_path, 'rb')).toarray()
-            label_map_path = os.path.join(dataset_dir, 'nodelistmap.pickle')
-            self.node_list_map = pickle.load(open(label_map_path, 'rb'))
+            if self.task == 'nc':
+                label_path = os.path.join(dataset_dir, 'node_labels.pickle')
+                self.node_labels = pickle.load(open(label_path, 'rb')).toarray()
+                label_map_path = os.path.join(dataset_dir, 'nodelistmap.pickle')
+                self.node_list_map = pickle.load(open(label_map_path, 'rb'))
 
         self.test_neg_arr = test_neg_arr
         self.test_pos_arr = test_pos_arr
@@ -111,7 +117,8 @@ class Solver:
         print('Initializing training....')
 
         self.model = AttentionWalkLayer(self.num_nodes, self.args.emb_dim, self.args.window_size,
-                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention, self.args.normalize, self.args.temperature, self.args.shared)
+                                        self.args.n_walks, self.args.beta, self.args.gamma, self.args.attention,
+                                        self.args.normalize, self.args.temperature, self.args.shared)
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
@@ -127,20 +134,12 @@ class Solver:
         # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=30)
 
         self.eval_metrics = {
-            'epoch_at_best_train': 0,
-            'best_train_auc': 0,
-            'test_auc_at_best_train': 0,
-            'attention': None,
-            'left_emb': None,
-            'right_emb': None
+            'best_train_loss': 1e10,
         }
 
     def train(self):
         print("Training the model....")
         self.model.train()
-        train_auc = 0
-        test_auc = 0
-        # self.transit_mat_series = self.transit_mat_series.to(self.device)
         for epoch in range(self.args.epochs):
             self.optimizer.zero_grad()
             self.transit_mat = self.transit_mat.to(self.device)
@@ -150,51 +149,63 @@ class Solver:
 
             # self.scheduler.step(epoch)
             if epoch % 10 == 0 or epoch+1 == self.args.epochs:
-                train_auc, test_auc, test_map = self.link_prediction_eval()
-                nc_micro, nc_macro = self.node_classification_eval()
+                train_auc, test_auc, test_map = self.link_prediction_eval() if self.task == 'lp' else (0, 0, 0)
+                nc_micro, nc_macro = self.node_classification_eval() if self.task == 'nc' else (0, 0)
 
-                if train_auc > self.eval_metrics['best_train_auc']:
-                    self.eval_metrics['best_train_auc'] = train_auc
-                    self.eval_metrics['test_auc_at_best_train'] = test_auc
+                if loss.item() < self.eval_metrics['best_train_loss']:
+                    self.eval_metrics['best_train_loss'] = loss.item()
                     self.eval_metrics['epoch_at_best_train'] = epoch
+                    self.eval_metrics['test_lp_auc_at_best_train'] = test_auc
+                    self.eval_metrics['test_lp_map_at_best_train'] = test_map
+                    self.eval_metrics['test_nc_micro_at_best_train'] = nc_micro
+                    self.eval_metrics['test_nc_macro_at_best_train'] = nc_macro
                     self.eval_metrics['attention'] = self.model.attention
                     self.eval_metrics['left_emb'] = self.model.left_emb
                     self.eval_metrics['right_emb'] = self.model.right_emb
-                    self.eval_metrics['test_map_at_best_train'] = test_map
-                    self.eval_metrics['test_micro_at_best_train'] = nc_micro
-                    self.eval_metrics['test_macro_at_best_train'] = nc_macro
 
-                print('Epoch: {:0>3d}/{}, '
-                      'Loss: {:.4f}, '
-                      'Train AUC: {:.4f}, '
-                      'Test AUC: {:.4f}, '
-                      'Best Train AUC: {:.4f}, '
-                      'Test AUC at Best Train: {:.4f}, '
-                      'Test MAP at Best Train: {:.4f}, '
-                      'Test Micro NC at Best Train: {:.4f}, '
-                      'Test Macro NC at Best Train: {:.4f}, '
-                      'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
-                                                            loss,
-                                                            train_auc,
-                                                            test_auc,
-                                                            self.eval_metrics['best_train_auc'],
-                                                            self.eval_metrics['test_auc_at_best_train'],
-                                                            self.eval_metrics['test_map_at_best_train'],
-                                                            self.eval_metrics['test_micro_at_best_train'],
-                                                            self.eval_metrics['test_macro_at_best_train'],
-                                                            self.eval_metrics['epoch_at_best_train']+1
-                                                            ))
+                if self.task == 'lp':
+                    print('Epoch: {:0>3d}/{}, '
+                          'Loss: {:.4f}, '
+                          'Test LP AUC: {:.4f}, '
+                          'Test LP mAP: {:.4f},\n'
+                          'Best Train LP Loss: {:.4f}, '
+                          'Test AUC at Best Train: {:.4f}, '
+                          'Test mAP at Best Train: {:.4f}, '
+                          'Epoch at Best Train: {:0>3d}\n'.format(epoch+1, self.args.epochs,
+                                                                loss,
+                                                                test_auc,
+                                                                test_map,
+                                                                self.eval_metrics['best_train_loss'],
+                                                                self.eval_metrics['test_lp_auc_at_best_train'],
+                                                                self.eval_metrics['test_lp_map_at_best_train'],
+                                                                self.eval_metrics['epoch_at_best_train']+1
+                                                                ))
+                else:
+                    print('Epoch: {:0>3d}/{}, '
+                          'Loss: {:.4f}, '
+                          'Test NC Micro-F1: {:.4f}, '
+                          'Test NC Macro-F1: {:.4f}, \n'
+                          'Test NC Micro-F1 at Best Train: {:.4f}, '
+                          'Test NC Macro-F1 at Best Train: {:.4f}, '
+                          'Epoch at Best Train: {:0>3d}\n'.format(epoch+1, self.args.epochs,
+                                                                loss,
+                                                                nc_micro,
+                                                                nc_macro,
+                                                                self.eval_metrics['test_nc_micro_at_best_train'],
+                                                                self.eval_metrics['test_nc_macro_at_best_train'],
+                                                                self.eval_metrics['epoch_at_best_train']+1
+                                                                ))
 
                 if epoch - self.eval_metrics['epoch_at_best_train'] >= 50:
-                    print('The model seems to be overfitting...')
+                    print('The model seems to become overfitting...')
                     break
 
     def node_classification_eval(self, test_ratio=0.3):
-        micro, macro = 0, 0
-
-        if self.node_labels is None:
-            print("Node labels are not provided...")
-            return micro, macro
+        # micro, macro = 0, 0
+        #
+        # if self.node_labels is None:
+        #     print("Node labels are not provided...")
+        #     return micro, macro
 
         if self.args.shared:
             embeds = self.model.left_emb.detach().to('cpu').numpy()
@@ -225,30 +236,29 @@ class Solver:
         train_auc = metrics.roc_auc_score(train_y, train_y_pred)
 
         # Compute test auc:
-        if len(self.test_pos_arr) > 0:
-            test_pos_prods = scores[self.test_pos_arr[:, 0], self.test_pos_arr[:, 1]]
-            test_neg_prods = scores[self.test_neg_arr[:, 0], self.test_neg_arr[:, 1]]
-            test_y = [0] * len(test_neg_prods) + [1] * len(test_pos_prods)
-            test_y_pred = np.concatenate([test_neg_prods, test_pos_prods], 0)
-            test_auc = metrics.roc_auc_score(test_y, test_y_pred)
+        test_pos_prods = scores[self.test_pos_arr[:, 0], self.test_pos_arr[:, 1]]
+        test_neg_prods = scores[self.test_neg_arr[:, 0], self.test_neg_arr[:, 1]]
+        test_y = [0] * len(test_neg_prods) + [1] * len(test_pos_prods)
+        test_y_pred = np.concatenate([test_neg_prods, test_pos_prods], 0)
+        test_auc = metrics.roc_auc_score(test_y, test_y_pred)
 
-            test_map = eval_link_prediction(self.model.left_emb,
-                                            self.model.right_emb,
-                                            self.test_pos_arr,
-                                            self.train_pos_arr,
-                                            is_directed=self.is_directed)
-        else:
-            test_auc = 0
-            test_map = 0
+        test_map = eval_link_prediction(self.model.left_emb,
+                                        self.model.right_emb,
+                                        self.test_pos_arr,
+                                        self.train_pos_arr,
+                                        is_directed=self.is_directed)
 
         return train_auc, test_auc, test_map
 
     def save_embedding(self):
         print("Saving the embedding....")
         left_emb = self.eval_metrics['left_emb'].detach().to('cpu').numpy()
-        right_emb = self.eval_metrics['right_emb'].to('cpu').detach().numpy()
+        right_emb = self.eval_metrics['right_emb'].detach().to('cpu').numpy()
         indices = np.arange(self.num_nodes).reshape(-1, 1)
-        embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
+        if not self.args.shared:
+            embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
+        else:
+            embedding = np.concatenate([indices, left_emb], axis=1)
         columns = ["id"] + ["x_" + str(x) for x in range(self.args.emb_dim)]
         embedding = pd.DataFrame(embedding, columns=columns)
         embedding_path = os.path.join(self.args.output, '{}_{}_embedding.csv'.format(self.args.dataset, self.args.attention))
@@ -286,17 +296,25 @@ class Solver:
 
     def save_results(self):
         print("Saving the results....")
-        results = 'Best Train AUC: {:.4f}, ' \
-                  'Test AUC at Best Train: {:.4f}, ' \
-                  'Test MAP at Best Train: {:.4f}, ' \
-                  'Test Micro NC at Best Train: {:.4f}, ' \
-                  'Test Macro NC at Best Train: {:.4f}, ' \
-                  'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
-                    self.eval_metrics['test_auc_at_best_train'],
-                    self.eval_metrics['test_map_at_best_train'],
-                    self.eval_metrics['test_micro_at_best_train'],
-                    self.eval_metrics['test_macro_at_best_train'],
-                    self.eval_metrics['epoch_at_best_train'])
+
+        if self.task == 'lp':
+            results = 'Best Train LP Loss: {:.4f}, ' \
+                      'Test AUC at Best Train: {:.4f}, ' \
+                      'Test mAP at Best Train: {:.4f}, ' \
+                      'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_loss'],
+                                                            self.eval_metrics['test_lp_auc_at_best_train'],
+                                                            self.eval_metrics['test_lp_map_at_best_train'],
+                                                            self.eval_metrics['epoch_at_best_train'] + 1
+                                                            )
+
+        else:
+            results = 'Loss: {:.4f}, ' \
+                      'Test NC Micro-F1 at Best Train: {:.4f}, ' \
+                      'Test NC Macro-F1 at Best Train: {:.4f}, ' \
+                      'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
+                                                            self.eval_metrics['test_nc_micro_at_best_train'],
+                                                            self.eval_metrics['test_nc_macro_at_best_train'],
+                                                            self.eval_metrics['epoch_at_best_train'])
         path = os.path.join(self.args.output, '{}_{}_results.txt'.format(self.args.dataset, self.args.attention))
         with open(path, mode='w') as f:
             f.write(results)

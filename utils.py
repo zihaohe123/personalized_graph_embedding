@@ -75,7 +75,7 @@ def get_lcc(G, is_directed=True):
 def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
     """
     test_ratio <= 0.5
-    keep self-loops(eg.ppi) in train_pos. test_pos, train_neg, test_neg have no self-loops.
+    keep self-loops(eg.ppi2) in train_pos. test_pos, train_neg, test_neg have no self-loops.
     """
     start_time = time.time()
     print('Original Graph', nx.info(G))
@@ -158,7 +158,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Prepare Data')
     parser.add_argument('--data_dir', type=str, default='datasets/citeseer', help='Data dir')
-    parser.add_argument('--task', default='nc', choices=('nc', 'lp'), help='Task to generate data for')
+    parser.add_argument('--task', default='lp', choices=('nc', 'lp'), help='Task to generate data for')
     parser.add_argument('--seed', default=0, type=int, help='Random seed')
     args = parser.parse_args()
     print(args)
