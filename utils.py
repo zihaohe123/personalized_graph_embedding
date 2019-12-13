@@ -116,7 +116,7 @@ def sample_train_test_Graph(G, data_dir, test_ratio=0.5, is_directed=True):
     print("Train Graph", nx.info(G_train))
     print("The number of test edges", len(test_edge_list))
 
-    nx.write_gpickle(G_train, data_dir + "/train.gpickle")
+    nx.write_gpickle(G_train, os.path.join(data_dir, "train.gpickle"))
     np.save(os.path.join(data_dir, "train.txt.npy"), np.array(G_train.edges()))
     np.save(os.path.join(data_dir, "test.txt.npy"), np.array(test_edge_list))
     with open(os.path.join(data_dir, 'nodelistmap.pickle'), 'wb') as f:
@@ -176,3 +176,4 @@ if __name__ == '__main__':
     save_dir = '{}_{}_{}'.format(args.data_dir, args.task, args.seed)
     os.makedirs(save_dir, exist_ok=True)
     sample_train_test_Graph(G, save_dir, test_ratio=test_ratio, is_directed=G.is_directed())
+    os.system('cp {} {}'.format(os.path.join(args.data_dir, 'node_labels.pickle'), save_dir))

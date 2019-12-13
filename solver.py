@@ -164,7 +164,7 @@ class Solver:
                 else:
                     print('Epoch: {:0>3d}/{}, '
                           'Loss: {:.4f}, '
-                          'Best Loss: {:.4f}'
+                          'Best Loss: {:.4f}, '
                           'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
                                                                 loss,
                                                                 best_train_loss,
