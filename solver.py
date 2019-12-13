@@ -33,6 +33,23 @@ class Solver:
         self.task = 'lp'    # link prediction (lp) or node classification (nc)
         self.eval_metrics = {}
 
+        description = 'wz_{}+emb_{}+lr_{}{}{}{}{}{}{}'.format(
+            self.args.window_size,
+            self.args.emb_dim,
+            self.args.lr,
+            '+shared' if self.args.shared else '',
+            '+normalize_sum' if self.args.normalize == 'sum' else '',
+            '+temperature_{}'.format(self.args.temperature) if self.args.temperature != 1.0 else '',
+            '+nwalks_{}'.format(self.args.n_walks) if self.args.n_walks != 80 else '',
+            '+beta_{}'.format(self.args.beta) if self.args.beta != 0.5 else '',
+            '+gamma_{}'.format(self.args.gamma) if args.gamma != 1e-5 else '',
+        )
+
+        output_path = os.path.join('output', self.args.dataset, self.args.attention, description, self.args.output_suffix)
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        self.output_path = output_path
+
         self.prepare_graph()
         self.init_training()
 
@@ -99,20 +116,6 @@ class Solver:
         transit_mat = transit_mat / (degree + 1e-7)
         self.transit_mat = torch.from_numpy(transit_mat)
 
-        # # degrees = adj_mat.sum(axis=0)  # V
-        # # diag = np.diag(degrees)
-        # # diag = np.linalg.inv(diag)
-        # # transit_mat = np.dot(diag, adj_mat) + 1e-7
-        # transit_mat = torch.from_numpy(transit_mat).to(self.device)
-        # transit_mat_series = [transit_mat]
-        #
-        # print('Preparing power series...')
-        # if self.args.window_size > 1:
-        #     for i in range(self.args.window_size-1):
-        #         print('Computing T^{}....'.format(i + 2))
-        #         transit_mat_series.append(torch.mm(transit_mat_series[-1], transit_mat))
-        # self.transit_mat_series = torch.stack(transit_mat_series)  # CxVxV
-
     def init_training(self):
         print('Initializing training....')
 
@@ -122,8 +125,6 @@ class Solver:
 
         if self.device == 'cuda':
             device_count = torch.cuda.device_count()
-            if device_count > 1:
-                self.model = nn.DataParallel(self.model)
             torch.backends.cudnn.benchmark = True
             print("Let's use {} GPUs!".format(device_count))
         self.model.to(self.device)
@@ -133,12 +134,10 @@ class Solver:
         # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.args.lr, momentum)
         # self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=30)
 
-        self.eval_metrics = {
-            'best_train_loss': 1e10,
-        }
-
     def train(self):
-        print("Training the model....")
+        print("Training the model....\n")
+        best_train_loss = 99999999
+        best_train_loss_epoch = 0
         self.model.train()
         for epoch in range(self.args.epochs):
             self.optimizer.zero_grad()
@@ -147,58 +146,36 @@ class Solver:
             loss.backward()
             self.optimizer.step()
 
-            # self.scheduler.step(epoch)
+            if loss.item() < best_train_loss:
+                best_train_loss = loss.item()
+                best_train_loss_epoch = epoch
+                self.save_ckp()
+
             if epoch % 10 == 0 or epoch+1 == self.args.epochs:
-                train_auc, test_auc, test_map = self.link_prediction_eval() if self.task == 'lp' else (0, 0, 0)
-                nc_micro, nc_macro = self.node_classification_eval() if self.task == 'nc' else (0, 0)
-
-                if loss.item() < self.eval_metrics['best_train_loss']:
-                    self.eval_metrics['best_train_loss'] = loss.item()
-                    self.eval_metrics['epoch_at_best_train'] = epoch
-                    self.eval_metrics['test_lp_auc_at_best_train'] = test_auc
-                    self.eval_metrics['test_lp_map_at_best_train'] = test_map
-                    self.eval_metrics['test_nc_micro_at_best_train'] = nc_micro
-                    self.eval_metrics['test_nc_macro_at_best_train'] = nc_macro
-                    self.eval_metrics['attention'] = self.model.attention
-                    self.eval_metrics['left_emb'] = self.model.left_emb
-                    self.eval_metrics['right_emb'] = self.model.right_emb
-
                 if self.task == 'lp':
                     print('Epoch: {:0>3d}/{}, '
                           'Loss: {:.4f}, '
-                          'Test LP AUC: {:.4f}, '
-                          'Test LP mAP: {:.4f},\n'
-                          'Best Train LP Loss: {:.4f}, '
-                          'Test AUC at Best Train: {:.4f}, '
-                          'Test mAP at Best Train: {:.4f}, '
-                          'Epoch at Best Train: {:0>3d}\n'.format(epoch+1, self.args.epochs,
+                          'Best Loss: {:.4f}, '
+                          'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
                                                                 loss,
-                                                                test_auc,
-                                                                test_map,
-                                                                self.eval_metrics['best_train_loss'],
-                                                                self.eval_metrics['test_lp_auc_at_best_train'],
-                                                                self.eval_metrics['test_lp_map_at_best_train'],
-                                                                self.eval_metrics['epoch_at_best_train']+1
+                                                                best_train_loss,
+                                                                best_train_loss_epoch+1
                                                                 ))
                 else:
                     print('Epoch: {:0>3d}/{}, '
                           'Loss: {:.4f}, '
-                          'Test NC Micro-F1: {:.4f}, '
-                          'Test NC Macro-F1: {:.4f}, \n'
-                          'Test NC Micro-F1 at Best Train: {:.4f}, '
-                          'Test NC Macro-F1 at Best Train: {:.4f}, '
-                          'Epoch at Best Train: {:0>3d}\n'.format(epoch+1, self.args.epochs,
+                          'Best Loss: {:.4f}'
+                          'Epoch at Best Train: {:0>3d}'.format(epoch+1, self.args.epochs,
                                                                 loss,
-                                                                nc_micro,
-                                                                nc_macro,
-                                                                self.eval_metrics['test_nc_micro_at_best_train'],
-                                                                self.eval_metrics['test_nc_macro_at_best_train'],
-                                                                self.eval_metrics['epoch_at_best_train']+1
+                                                                best_train_loss,
+                                                                best_train_loss_epoch+1
                                                                 ))
 
-                if epoch - self.eval_metrics['epoch_at_best_train'] >= 50:
+                if epoch - best_train_loss_epoch >= 50:
                     print('The model seems to become overfitting...')
                     break
+
+        print('Training Finished. Evaluating....')
 
     def node_classification_eval(self, test_ratio=0.3):
         # micro, macro = 0, 0
@@ -252,32 +229,30 @@ class Solver:
 
     def save_embedding(self):
         print("Saving the embedding....")
-        left_emb = self.eval_metrics['left_emb'].detach().to('cpu').numpy()
-        right_emb = self.eval_metrics['right_emb'].detach().to('cpu').numpy()
-        indices = np.arange(self.num_nodes).reshape(-1, 1)
+        left_emb = self.model.left_emb.detach().to('cpu').numpy()
+        right_emb = self.model.right_emb.detach().to('cpu').numpy()
         if not self.args.shared:
-            embedding = np.concatenate([indices, left_emb, right_emb], axis=1)
+            embedding = np.concatenate([left_emb, right_emb], axis=1)
         else:
-            embedding = np.concatenate([indices, left_emb], axis=1)
-        columns = ["id"] + ["x_" + str(x) for x in range(self.args.emb_dim)]
+            embedding = np.concatenate([left_emb], axis=1)
+        columns = ["x_" + str(x) for x in range(self.args.emb_dim)]
         embedding = pd.DataFrame(embedding, columns=columns)
-        embedding_path = os.path.join(self.args.output, '{}_{}_embedding.csv'.format(self.args.dataset, self.args.attention))
+        embedding_path = os.path.join(self.output_path, 'embedding.csv')
         embedding.to_csv(embedding_path, index=None)
 
     def save_attention(self):
         print("Saving the attention....")
-        if self.args.attention in ('global_exponential', 'personalized_exponential'):
-            q = self.model.q.detach().to('cpu').numpy()
+        if self.args.attention in ['global_exponential', 'personalized_exponential']:
+            q = self.model.q.detach().to('cpu').numpy().reshape(-1, 1)
             q = pd.DataFrame(q)
-
-            q_path = os.path.join(self.args.output, '{}_{}_q.csv'.format(self.args.dataset, self.args.attention))
+            q_path = os.path.join(self.output_path, 'q.csv')
             q.to_csv(q_path, index=None)
         elif self.args.attention in ['global_gamma', 'personalized_gamma']:
             k = self.model.k.detach().to('cpu').numpy().reshape(-1, 1)
             theta = self.model.theta.detach().to('cpu').numpy().reshape(-1, 1)
             data = np.concatenate((k, theta), axis=1)
             df = pd.DataFrame(data, columns=['k', 'theta'])
-            path = os.path.join(self.args.output, '{}_{}_k_theta.csv'.format(self.args.dataset, self.args.attention))
+            path = os.path.join(self.output_path, 'k_theta.csv')
             df.to_csv(path, index=None)
         elif self.args.attention in ['global_quadratic', 'personalized_quadratic']:
             a = self.model.a.detach().to('cpu').numpy().reshape(-1, 1)
@@ -285,7 +260,7 @@ class Solver:
             c = self.model.c.detach().to('cpu').numpy().reshape(-1, 1)
             data = np.concatenate((a, b, c), axis=1)
             df = pd.DataFrame(data, columns=['a', 'b', 'c'])
-            path = os.path.join(self.args.output, '{}_{}_a_b_c.csv'.format(self.args.dataset, self.args.attention))
+            path = os.path.join(self.output_path, 'a_b_c.csv'.format(self.args.dataset, self.args.attention))
             df.to_csv(path, index=None)
         elif self.args.attention in ['global_cubic', 'personalized_cubic']:
             a = self.model.a.detach().to('cpu').numpy().reshape(-1, 1)
@@ -294,43 +269,44 @@ class Solver:
             d = self.model.d.detach().to('cpu').numpy().reshape(-1, 1)
             data = np.concatenate((a, b, c, d), axis=1)
             df = pd.DataFrame(data, columns=['a', 'b', 'c', 'd'])
-            path = os.path.join(self.args.output, '{}_{}_a_b_c_d.csv'.format(self.args.dataset, self.args.attention))
+            path = os.path.join(self.output_path, 'a_b_c_d.csv')
             df.to_csv(path, index=None)
-        attention = nn.functional.softmax(self.eval_metrics['attention'], dim=0).detach().to('cpu').numpy().reshape(self.args.window_size, -1)
-        indices = np.arange(self.args.window_size).reshape(-1, 1)
-        attention = np.concatenate([indices, attention], axis=1)
-        attention = pd.DataFrame(attention).rename(columns={0: 'Order'})
-        attention_path = os.path.join(self.args.output, '{}_{}_attention.csv'.format(self.args.dataset, self.args.attention))
-        attention.to_csv(attention_path, index=None)
+        if self.args.normalize == 'softmax':
+            attention = nn.functional.softmax(self.model.attention * self.model.temperature, dim=0)
+        else:
+            attention = self.model.attention / (torch.sum(self.model.attention, dim=0))
+        attention = attention.detach().to('cpu').numpy().reshape(-1, self.args.window_size)
+        columns = ["x_" + str(x) for x in range(self.args.window_size)]
+        df = pd.DataFrame(attention, columns=columns)
+        attention_path = os.path.join(self.output_path, 'attention.csv')
+        df.to_csv(attention_path, index=None)
 
     def save_results(self):
         print("Saving the results....")
 
+        train_auc, test_auc, test_map = self.link_prediction_eval() if self.task == 'lp' else (0, 0, 0)
+        nc_micro, nc_macro = self.node_classification_eval() if self.task == 'nc' else (0, 0)
         if self.task == 'lp':
-            results = 'Best Train LP Loss: {:.4f}, ' \
-                      'Test AUC at Best Train: {:.4f}, ' \
-                      'Test mAP at Best Train: {:.4f}, ' \
-                      'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_loss'],
-                                                            self.eval_metrics['test_lp_auc_at_best_train'],
-                                                            self.eval_metrics['test_lp_map_at_best_train'],
-                                                            self.eval_metrics['epoch_at_best_train'] + 1
-                                                            )
-
+            results = 'Test AUC: {:.4f}, Test mAP: {:.4f}, \n'.format(test_auc, test_map)
         else:
-            results = 'Loss: {:.4f}, ' \
-                      'Test NC Micro-F1 at Best Train: {:.4f}, ' \
-                      'Test NC Macro-F1 at Best Train: {:.4f}, ' \
-                      'Epoch at Best Train: {:0>3d}'.format(self.eval_metrics['best_train_auc'],
-                                                            self.eval_metrics['test_nc_micro_at_best_train'],
-                                                            self.eval_metrics['test_nc_macro_at_best_train'],
-                                                            self.eval_metrics['epoch_at_best_train'])
-        path = os.path.join(self.args.output, '{}_{}_results.txt'.format(self.args.dataset, self.args.attention))
+            results = 'Test NC Micro-F1: {:.4f}, Test NC Macro-F1: {:.4f},\n'.format(nc_micro, nc_macro)
+        print(results)
+
+        path = os.path.join(self.output_path, 'results.txt')
         with open(path, mode='w') as f:
             f.write(results)
 
+    def save_ckp(self):
+        ckp = {'state_dict': self.model.state_dict()}
+        torch.save(ckp, os.path.join(self.output_path, 'model.pth'))
+
+    def load_ckp(self):
+        print('Loading checkpoint....')
+        ckp = torch.load(os.path.join(self.output_path, 'model.pth'), map_location=self.device)
+        self.model.load_state_dict(ckp['state_dict'])
+
     def save(self):
-        if not os.path.exists(self.args.output):
-            os.mkdir(self.args.output)
+        self.load_ckp()
         self.save_embedding()
         self.save_attention()
         self.save_results()
