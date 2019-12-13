@@ -281,7 +281,7 @@ class Solver:
             attention = nn.functional.softmax(self.model.attention * self.model.temperature, dim=0)     # window_size*n_nodes
         else:
             attention = self.model.attention / (torch.sum(self.model.attention, dim=0))
-        attention = attention.detach().to('cpu').transpose(0, 1).numpy()
+        attention = attention.detach().to('cpu').numpy().T.reshape(-1, self.args.window_size)
         columns = ["x_" + str(x) for x in range(self.args.window_size)]
         df = pd.DataFrame(attention, columns=columns)
         attention_path = os.path.join(self.output_path, 'attention.csv')
