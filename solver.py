@@ -239,9 +239,11 @@ class Solver:
         right_emb = self.model.right_emb.detach().to('cpu').numpy()
         if not self.args.shared:
             embedding = np.concatenate([left_emb, right_emb], axis=1)
+            columns = ["x_" + str(x) for x in range(self.args.emb_dim)]
         else:
             embedding = np.concatenate([left_emb], axis=1)
-        columns = ["x_" + str(x) for x in range(self.args.emb_dim)]
+            columns = ["x_" + str(x) for x in range(self.args.emb_dim//2)]
+
         embedding = pd.DataFrame(embedding, columns=columns)
         embedding_path = os.path.join(self.output_path, 'embedding.csv')
         embedding.to_csv(embedding_path, index=None)
