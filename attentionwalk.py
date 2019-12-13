@@ -13,6 +13,10 @@ class AttentionWalkLayer(nn.Module):
             self.right_emb = nn.Parameter(torch.zeros((n_nodes, emb_dim//2)), requires_grad=True)
         self.attention_method = attention
         self.normalize_method = normalize
+        if self.normalize_method == 'sum':
+            if self.attention_method not in ('global_exponential', 'personalized_exponential', 'global_gamma', 'personalized_gamma'):
+                print('Sum normalize method require all entries are positive')
+                exit()
         self.attention = None
         self.q = None
         self.k = None
