@@ -113,4 +113,4 @@ datasets*
 run*.sh
 output/
 nc_data/
-output/
+nc_data.zip
