@@ -214,14 +214,20 @@ class Solver:
 
         temp_map = {v:k for k, v in self.node_list_map.items()}
         labels = np.array([self.node_labels[temp_map[i]] for i in range(self.num_nodes)])
-        X_tr, X_te, y_tr, y_te = train_test_split(embeds,
-                                                  labels,
-                                                  test_size=test_ratio,
-                                                  random_state=0)
 
-        micro, macro = eval_node_classification(X_tr, y_tr, X_te, y_te)
+        micros, macros = [], []
 
-        return micro, macro
+        for seed in range(0, 25, 5):
+            X_tr, X_te, y_tr, y_te = train_test_split(embeds,
+                                                      labels,
+                                                      test_size=test_ratio,
+                                                      random_state=seed)
+
+            micro, macro = eval_node_classification(X_tr, y_tr, X_te, y_te)
+            micros.append(micro)
+            macros.append(macro)
+
+        return sum(micros) / len(micros), sum(macros) / len(macros)
 
     def link_prediction_eval(self):
         """Calls sess.run(g) and computes AUC metric for test and train."""
