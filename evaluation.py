@@ -5,16 +5,14 @@ import numpy as np
 import torch
 
 
-def get_reconstructed_adj(left_embed, right_embed, is_directed=False):
+def get_reconstructed_adj(left_embed, right_embed):
     n = left_embed.shape[0]
 
-    if is_directed:
-        di = np.diag_indices(n)
-    else:
-        di = np.tril_indices(n)
+    di = np.diag_indices(n)
 
     adj = torch.mm(torch.tensor(left_embed), torch.tensor(right_embed).transpose(0, 1))
     adj[di[0], di[1]] = 0
+
     return adj
 
 
@@ -88,9 +86,29 @@ def eval_link_prediction(left_embed, right_embed, test_pos, train_pos, max_k=100
     for edge in train_pos:
         train_pos_set.add((edge[0], edge[1]))
 
-    adj = get_reconstructed_adj(left_embed, right_embed, is_directed)
+    adj = get_reconstructed_adj(left_embed, right_embed)
     test_pred = get_pred_edges(adj)
-    next_pred = [e for e in test_pred if (e[0][0], e[0][1]) not in train_pos_set]
+
+    if is_directed:
+        next_pred = [e for e in test_pred if (e[0][0], e[0][1]) not in train_pos_set]
+    else:
+        exist_pairs = {}
+        for e in test_pred:
+            if e[0][0] < e[0][1]:
+                pair = (e[0][0], e[0][1])
+            else:
+                pair = (e[0][1], e[0][0])
+
+            if pair in train_pos_set:
+                continue
+
+            if pair not in exist_pairs:
+                exist_pairs[pair] = e[1]
+
+            exist_pairs[pair] = max(exist_pairs[pair], e[1])
+
+        next_pred = [(k, v) for k, v in exist_pairs.items()]
+
     MAP = compute_MAP(test_pos_set, next_pred, left_embed.shape[0], max_k)
 
     return MAP
