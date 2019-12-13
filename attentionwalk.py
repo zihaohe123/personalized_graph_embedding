@@ -28,7 +28,7 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'global_vector':
             self.attention = nn.Parameter(torch.ones(window_size), requires_grad=True)
         elif attention == 'global_exponential':
-            self.q = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.q = nn.Parameter(torch.zeros(1), requires_grad=True)
         elif attention == 'global_gamma':
             self.k = nn.Parameter(torch.ones(1), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(1), requires_grad=True)
@@ -46,7 +46,7 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'personalized_vector':
             self.attention = nn.Parameter(torch.ones((window_size, n_nodes)), requires_grad=True)
         elif attention == 'personalized_exponential':
-            self.q = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
+            self.q = nn.Parameter(torch.zeros(n_nodes), requires_grad=True)
         elif attention == 'personalized_linear':
             self.q = nn.Parameter(torch.ones(n_nodes), requires_grad=True)
         elif attention == 'personalized_gamma':
@@ -126,7 +126,7 @@ class AttentionWalkLayer(nn.Module):
 
     def update_attention(self):
         if self.attention_method in ('global_exponential', 'personalized_exponential'):
-            q_abs = torch.abs(self.q)
+            q_abs = 2 * torch.sigmoid(self.q)
             mults = []
             for i in range(self.window_size):
                 mults.append(0.99 * (q_abs ** i) + 0.01)
