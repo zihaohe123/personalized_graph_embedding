@@ -32,6 +32,8 @@ class AttentionWalkLayer(nn.Module):
         elif attention == 'global_gamma':
             self.k = nn.Parameter(torch.ones(1), requires_grad=True)
             self.theta = nn.Parameter(torch.ones(1), requires_grad=True)
+        elif attention == 'global_linear':
+            self.q = nn.Parameter(torch.ones(1), requires_grad=True)
         elif attention == 'global_quadratic':
             self.a = nn.Parameter(torch.tensor([-1.]), requires_grad=True)
             self.b = nn.Parameter(torch.ones(1), requires_grad=True)
@@ -86,7 +88,7 @@ class AttentionWalkLayer(nn.Module):
             for i in range(self.window_size):
                 mults.append(0.99 * (q_abs ** i) + 0.01)
             self.attention = torch.stack(mults)
-        elif self.attention_method == 'personalized_linear':
+        elif self.attention_method in ('global_linear', 'personalized_linear'):
             q_neg = -1 * self.q
             mults = []
             for i in range(self.window_size):
