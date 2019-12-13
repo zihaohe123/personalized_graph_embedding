@@ -82,37 +82,7 @@ class AttentionWalkLayer(nn.Module):
         # nn.init.uniform_(self.attention, -0.01, 0.01)
 
     def forward(self, transit_mat):
-        if self.attention_method in ('global_exponential', 'personalized_exponential'):
-            q_abs = torch.abs(self.q)
-            mults = []
-            for i in range(self.window_size):
-                mults.append(0.99 * (q_abs ** i) + 0.01)
-            self.attention = torch.stack(mults)
-        elif self.attention_method in ('global_linear', 'personalized_linear'):
-            q_neg = -1 * self.q
-            mults = []
-            for i in range(self.window_size):
-                mults.append(q_neg * i)
-            self.attention = torch.stack(mults)
-        elif self.attention_method in ['global_gamma', 'personalized_gamma']:
-            mults = []
-            # k = 10*torch.sigmoid(self.k)
-            # theta = 2*torch.sigmoid(self.theta)
-            for i in range(1, self.window_size+1):
-                mults.append(torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
-            self.attention = torch.stack(mults)
-        elif self.attention_method in ['global_quadratic', 'personalized_quadratic']:
-            mults = []
-            for i in range(1, self.window_size+1):
-                mults.append(self.a*i**2 + self.b*i + self.c)
-            self.attention = torch.stack(mults)
-        elif self.attention_method in ['global_cubic', 'personalized_cubic']:
-            mults = []
-            for i in range(1, self.window_size+1):
-                mults.append(self.a*i**3 + self.b*i**2 + self.c*i + self.d)
-            self.attention = torch.stack(mults)
-        elif self.attention_method == 'personalized_function':
-            self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes
+        self.update_attention()
 
         if self.normalize_method == 'softmax':
             attention_probs = nn.functional.softmax(self.attention * self.temperature, dim=0)  # C
@@ -153,3 +123,36 @@ class AttentionWalkLayer(nn.Module):
             loss_on_regularization += self.gamma * torch.mean(self.d)**2
 
         return loss_on_matrices + loss_on_regularization
+
+    def update_attention(self):
+        if self.attention_method in ('global_exponential', 'personalized_exponential'):
+            q_abs = torch.abs(self.q)
+            mults = []
+            for i in range(self.window_size):
+                mults.append(0.99 * (q_abs ** i) + 0.01)
+            self.attention = torch.stack(mults)
+        elif self.attention_method in ('global_linear', 'personalized_linear'):
+            q_neg = -1 * self.q
+            mults = []
+            for i in range(self.window_size):
+                mults.append(q_neg * i)
+            self.attention = torch.stack(mults)
+        elif self.attention_method in ['global_gamma', 'personalized_gamma']:
+            mults = []
+            # k = 10*torch.sigmoid(self.k)
+            # theta = 2*torch.sigmoid(self.theta)
+            for i in range(1, self.window_size+1):
+                mults.append(torch.pow(i, self.k-1)*torch.exp(-self.theta*i))
+            self.attention = torch.stack(mults)
+        elif self.attention_method in ['global_quadratic', 'personalized_quadratic']:
+            mults = []
+            for i in range(1, self.window_size+1):
+                mults.append(self.a*i**2 + self.b*i + self.c)
+            self.attention = torch.stack(mults)
+        elif self.attention_method in ['global_cubic', 'personalized_cubic']:
+            mults = []
+            for i in range(1, self.window_size+1):
+                mults.append(self.a*i**3 + self.b*i**2 + self.c*i + self.d)
+            self.attention = torch.stack(mults)
+        elif self.attention_method == 'personalized_function':
+            self.attention = torch.t(self.linear(self.left_emb))  # n_nodes*window_size --> window_size*n_nodes

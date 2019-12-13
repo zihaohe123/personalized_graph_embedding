@@ -278,10 +278,10 @@ class Solver:
             path = os.path.join(self.output_path, 'a_b_c_d.csv')
             df.to_csv(path, index=None)
         if self.args.normalize == 'softmax':
-            attention = nn.functional.softmax(self.model.attention * self.model.temperature, dim=0)
+            attention = nn.functional.softmax(self.model.attention * self.model.temperature, dim=0)     # window_size*n_nodes
         else:
             attention = self.model.attention / (torch.sum(self.model.attention, dim=0))
-        attention = attention.detach().to('cpu').numpy().reshape(-1, self.args.window_size)
+        attention = attention.detach().to('cpu').transpose(0, 1).numpy()
         columns = ["x_" + str(x) for x in range(self.args.window_size)]
         df = pd.DataFrame(attention, columns=columns)
         attention_path = os.path.join(self.output_path, 'attention.csv')
@@ -313,6 +313,7 @@ class Solver:
 
     def save(self):
         self.load_ckp()
+        self.model.update_attention()
         self.save_embedding()
         self.save_attention()
         self.save_results()
