@@ -85,7 +85,7 @@ class AttentionWalkLayer(nn.Module):
         nn.init.uniform_(self.right_emb, -0.1, 0.1)
         # nn.init.uniform_(self.attention, -0.01, 0.01)
 
-    def forward(self, transit_mat):
+    def forward(self, adj_mat, transit_mat):
         self.update_attention()
 
         if self.normalize_method == 'softmax':
@@ -106,7 +106,7 @@ class AttentionWalkLayer(nn.Module):
         left_dot_right = torch.mm(self.left_emb, self.right_emb.transpose(0, 1))
 
         loss_on_target = -weighted_transit_mat * nn.functional.logsigmoid(left_dot_right) # logsigmoid() is more numerically stable
-        loss_on_opposite = -(1-transit_mat) * (-left_dot_right + nn.functional.logsigmoid(left_dot_right))  # log(1-sigmoid(x)) = -x + logsigmoid(x)
+        loss_on_opposite = -(1-adj_mat) * (-left_dot_right + nn.functional.logsigmoid(left_dot_right))  # log(1-sigmoid(x)) = -x + logsigmoid(x)
         loss_on_matrices = torch.mean(torch.abs(loss_on_target+loss_on_opposite))
         loss_on_regularization = self.beta * torch.mean(self.attention**2) \
                                  + self.gamma * (torch.mean(self.left_emb**2) + torch.mean(self.right_emb**2))

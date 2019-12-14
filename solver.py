@@ -26,6 +26,7 @@ class Solver:
         self.test_pos_arr = None
         self.train_pos_arr = None
         self.train_neg_arr = None
+        self.adj_mat = None
         self.transit_mat = None
         self.eval_metrics = None
         self.node_labels = None
@@ -111,9 +112,11 @@ class Solver:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.num_workers = max([4 * torch.cuda.device_count(), 4])
 
-        transit_mat = adj_mat.T
-        degree = transit_mat.sum(axis=0)
+        import copy
+        transit_mat = copy.deepcopy(adj_mat)
+        degree = transit_mat.sum(axis=1)
         transit_mat = transit_mat / (degree + 1e-7)
+        self.adj_mat = torch.from_numpy(adj_mat)
         self.transit_mat = torch.from_numpy(transit_mat)
 
     def init_training(self):
@@ -136,13 +139,14 @@ class Solver:
 
     def train(self):
         print("Training the model....\n")
-        best_train_loss = 99999999
+        best_train_loss = 9999999999999999
         best_train_loss_epoch = 0
         self.model.train()
         for epoch in range(self.args.epochs):
             self.optimizer.zero_grad()
+            self.adj_mat = self.adj_mat.to(self.device)
             self.transit_mat = self.transit_mat.to(self.device)
-            loss = self.model(self.transit_mat)
+            loss = self.model(self.adj_mat, self.transit_mat)
             loss.backward()
             self.optimizer.step()
 
@@ -317,6 +321,6 @@ class Solver:
     def save(self):
         self.load_ckp()
         self.model.update_attention()
+        self.save_results()
         self.save_embedding()
         self.save_attention()
-        self.save_results()
