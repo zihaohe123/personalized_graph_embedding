@@ -118,6 +118,7 @@ class Solver:
         transit_mat = transit_mat / (degree + 1e-7)
         self.adj_mat = torch.from_numpy(adj_mat)
         self.transit_mat = torch.from_numpy(transit_mat)
+        self.degree = torch.from_numpy(degree)
 
     def init_training(self):
         print('Initializing training....')
@@ -146,7 +147,7 @@ class Solver:
             self.optimizer.zero_grad()
             self.adj_mat = self.adj_mat.to(self.device)
             self.transit_mat = self.transit_mat.to(self.device)
-            loss = self.model(self.adj_mat, self.transit_mat)
+            loss = self.model(self.adj_mat, self.transit_mat, self.degree)
             loss.backward()
             self.optimizer.step()
 

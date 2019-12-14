@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import scipy
 
-
 class AttentionWalkLayer(nn.Module):
     def __init__(self, n_nodes, emb_dim, window_size, n_walks, beta, gamma, attention, normalize, temperature, shared):
         super(AttentionWalkLayer, self).__init__()
@@ -85,7 +84,7 @@ class AttentionWalkLayer(nn.Module):
         nn.init.uniform_(self.right_emb, -0.1, 0.1)
         # nn.init.uniform_(self.attention, -0.01, 0.01)
 
-    def forward(self, adj_mat, transit_mat):
+    def forward(self, adj_mat, transit_mat, degree):
         self.update_attention()
 
         if self.normalize_method == 'softmax':
@@ -101,7 +100,7 @@ class AttentionWalkLayer(nn.Module):
         for i in range(self.window_size):
             transit_mat_power_n = torch.mm(transit_mat_power_n, transit_mat)
             weighted_transit_mat += attention_probs[i] * transit_mat_power_n
-        weighted_transit_mat *= self.n_walks * self.n_nodes
+        weighted_transit_mat *= degree * self.n_walks * self.n_nodes
 
         left_dot_right = torch.mm(self.left_emb, self.right_emb.transpose(0, 1))
 
