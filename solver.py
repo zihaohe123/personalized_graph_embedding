@@ -189,7 +189,7 @@ class Solver:
         else:
             embeds = torch.cat((self.model.left_emb, self.model.right_emb), dim=1).detach().to('cpu').numpy()
 
-        temp_map = {v:k for k, v in self.node_list_map.items()}
+        temp_map = {v: k for k, v in self.node_list_map.items()}
         labels = np.array([self.node_labels[temp_map[i]] for i in range(self.num_nodes)])
 
         micros, macros = [], []
