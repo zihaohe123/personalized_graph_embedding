@@ -105,7 +105,7 @@ class AttentionWalkLayer(nn.Module):
 
         left_dot_right = torch.mm(self.left_emb, self.right_emb.transpose(0, 1))
 
-        loss_on_target = -weighted_transit_mat * nn.functional.logsigmoid(left_dot_right) # logsigmoid() is more numerically stable
+        loss_on_target = -weighted_transit_mat.t() * nn.functional.logsigmoid(left_dot_right) # logsigmoid() is more numerically stable
         loss_on_opposite = -(1-adj_mat) * (-left_dot_right + nn.functional.logsigmoid(left_dot_right))  # log(1-sigmoid(x)) = -x + logsigmoid(x)
         loss_on_matrices = torch.mean(torch.abs(loss_on_target+loss_on_opposite))
         loss_on_regularization = self.beta * torch.mean(self.attention**2) \

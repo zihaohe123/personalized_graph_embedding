@@ -113,8 +113,8 @@ class Solver:
         self.num_workers = max([4 * torch.cuda.device_count(), 4])
 
         import copy
-        transit_mat = copy.deepcopy(adj_mat)
-        degree = transit_mat.sum(axis=1)
+        transit_mat = copy.deepcopy(adj_mat.T)
+        degree = transit_mat.sum(axis=0)
         transit_mat = transit_mat / (degree + 1e-7)
         self.adj_mat = torch.from_numpy(adj_mat)
         self.transit_mat = torch.from_numpy(transit_mat)
