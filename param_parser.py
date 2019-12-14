@@ -26,7 +26,7 @@ def parameter_parser():
                         help="Attention method to use")
     parser.add_argument("--window-size", type=int, default=10, help="Skip-gram window size. Default is 10.")
     parser.add_argument("--emb_dim", type=int, default=128, help="Number of dimensions. Default is 64.")
-    parser.add_argument("--lr", type=float, default=5e-1, help="Gradient descent learning rate. Default is 0.5.")
+    parser.add_argument("--lr", type=float, default=0.2, help="Gradient descent learning rate. Default is 0.5.")
     parser.add_argument("--shared", action='store_true', default=False, help='Shared left and right embedding')
     parser.add_argument("--normalize", default="softmax",
                         choices=('softmax', 'sum'),

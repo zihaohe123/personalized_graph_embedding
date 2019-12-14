@@ -147,6 +147,7 @@ class Solver:
             self.optimizer.zero_grad()
             self.adj_mat = self.adj_mat.to(self.device)
             self.transit_mat = self.transit_mat.to(self.device)
+            self.degree = self.degree.to(self.device)
             loss = self.model(self.adj_mat, self.transit_mat, self.degree)
             loss.backward()
             self.optimizer.step()
@@ -176,7 +177,7 @@ class Solver:
                                                                 best_train_loss_epoch+1
                                                                 ))
 
-                if epoch - best_train_loss_epoch >= 50:
+                if epoch - best_train_loss_epoch >= 100:
                     print('The model seems to become overfitting...')
                     break
 
