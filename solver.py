@@ -230,7 +230,6 @@ class Solver:
                                         self.test_pos_arr,
                                         self.train_pos_arr,
                                         is_directed=self.is_directed)
-
         return train_auc, test_auc, test_map
 
     def save_embedding(self):
@@ -284,7 +283,7 @@ class Solver:
         else:
             attention = self.model.attention / (torch.sum(self.model.attention, dim=0))
         if attention.ndim > 1:
-            attention = attention.tranpose(0, 1)
+            attention = attention.transpose(0, 1)
         attention = attention.detach().to('cpu').numpy().reshape(-1, self.args.window_size)
         columns = ["x_" + str(x) for x in range(self.args.window_size)]
         df = pd.DataFrame(attention, columns=columns)
