@@ -75,8 +75,11 @@ def compute_MAP(true_edges, pred_edges, node_num, max_k):
 
 
 def eval_link_prediction(left_embed, right_embed, test_pos, train_pos, max_k=100, is_directed=False):
-    left_embed = left_embed.detach().to('cpu').numpy()
-    right_embed = right_embed.detach().to('cpu').numpy()
+    try:
+        left_embed = left_embed.detach().to('cpu').numpy()
+        right_embed = right_embed.detach().to('cpu').numpy()
+    except:
+        pass
 
     test_pos_set, train_pos_set = set(), set()
 
